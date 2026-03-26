@@ -1,4 +1,24 @@
 {
-  "generatedAt": null,
-  "notes": []
+  "generatedAt": "2026-03-26T11:27:31.151723+00:00",
+  "notes": [
+    {
+      "title": "OpenKnowForge 项目使用方法（本地开发与预览）",
+      "date": "2026-03-26",
+      "tags": [
+        "guide",
+        "how-to",
+        "openknowforge",
+        "local-dev"
+      ],
+      "link": "/notes/openknowforge",
+      "excerpt": "# OpenKnowForge 项目使用方法（本地开发与预览） ## 1. 准备环境（micromamba） ```bash micromamba create -y -n openknowforge python=3.11 micromamba run -n openknowforge pip install -r requirements.txt -r requirements-dev.txt"
+    },
+    {
+      "title": "Explore Notes",
+      "date": "",
+      "tags": [],
+      "link": "/notes/explorer",
+      "excerpt": "# Explore Notes Use this page to filter by tag and search instantly from the generated `search-index.json`. <NoteExplorer />"
+    }
+  ]
 }
