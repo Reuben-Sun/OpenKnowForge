@@ -10,10 +10,10 @@ tags:
 - vitepress
 - ci
 created_at: '2026-03-26T00:00:00+00:00'
-updated_at: '2026-03-26T16:44:57+00:00'
-submitted_at: '2026-03-26T16:44:57+00:00'
+updated_at: '2026-03-26T16:53:40+00:00'
+submitted_at: '2026-03-26T16:53:40+00:00'
 date: '2026-03-26'
-word_count: 356
+word_count: 341
 image_count: 0
 type: guide
 status: published
@@ -48,18 +48,16 @@ npm run docs:dev
 
 ### 1. 配置 VitePress base（关键）
 
-如果你使用的是 **项目页**（地址形如 `https://<user>.github.io/<repo>/`），需要在 `docs/.vitepress/config.ts` 中设置：
+本项目的 `docs/.vitepress/config.ts` 已经自动处理 `base`，不需要手动写死：
 
 ```ts
-export default defineConfig({
-  base: '/OpenKnowForge/',
-  // ...
-})
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]
+const base = process.env.GITHUB_ACTIONS === 'true' && repoName ? `/${repoName}/` : '/'
 ```
 
-说明：`/OpenKnowForge/` 需替换为你的仓库名。
-
-如果你使用 **用户主页**（`https://<user>.github.io/`）或绑定了自定义域名根路径，可保持默认 `base: '/'`。
+含义：
+1. 本地开发时使用 `base: '/'`。
+2. GitHub Actions 构建时自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
 
 ### 2. 启用 GitHub Pages
 
