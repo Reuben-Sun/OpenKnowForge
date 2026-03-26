@@ -16,15 +16,16 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Notes', link: '/notes/' },
       { text: 'Explore', link: '/notes/explorer' },
-      { text: 'Guide', link: '/guide' }
+      { text: 'Guide', link: '/guide/api' }
     ],
     sidebar: {
       '/guide/': [
         {
           text: 'Guide',
           items: [
-            { text: 'Guide & API', link: '/guide' },
-            { text: 'Structure', link: '/guide/structure' }
+            { text: 'Guide', link: '/guide' },
+            { text: 'API', link: '/guide/api' },
+            { text: 'Struture', link: '/guide/structure' }
           ]
         }
       ],
