@@ -23,12 +23,19 @@ curl -X POST http://127.0.0.1:8000/note \
     "images": [],
     "type": "concept",
     "status": "mature",
+    "is_draft": false,
     "related": [],
     "submitted_at": "2026-03-26T10:00:00+00:00"
   }'
 ```
 
-`status` supports: `mature` (default) and `draft`.
+`status` supports: `mature` (default) and `draft`.  
+You can also use `is_draft` (`true/false`) directly.
+
+Constraints:
+
+- Use either `status` or `is_draft`.
+- If both are provided, they must be consistent, otherwise API returns `400` (`status conflicts with is_draft`).
 
 Key fields in response:
 
@@ -78,7 +85,33 @@ curl -X PUT http://127.0.0.1:8000/note/<slug> \
   }'
 ```
 
-## 4) Delete note `DELETE /note/{slug}`
+`PUT /note/{slug}` also supports `is_draft` if you want to switch status while editing content.
+
+## 4) Update status only `PATCH /note/{slug}/status`
+
+Switches draft/mature status without changing note content.
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/note/<slug>/status \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "is_draft": true,
+    "submitted_at": "2026-03-26T13:10:00+00:00"
+  }'
+```
+
+Or:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/note/<slug>/status \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "status": "mature",
+    "submitted_at": "2026-03-26T13:20:00+00:00"
+  }'
+```
+
+## 5) Delete note `DELETE /note/{slug}`
 
 Deletes the note file and removes local image assets referenced in its body (`/project/images/...`).
 The system then rebuilds indexes and writes a git commit record.
@@ -108,4 +141,10 @@ List all notes ordered by last edited time:
 
 ```bash
 curl http://127.0.0.1:8000/notes
+```
+
+List drafts only:
+
+```bash
+curl http://127.0.0.1:8000/notes/drafts
 ```

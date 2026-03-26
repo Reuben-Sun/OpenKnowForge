@@ -425,6 +425,148 @@ def test_post_note_rejects_invalid_status(client: TestClient) -> None:
     assert 'status must be one of:' in response.json()['detail']
 
 
+def test_post_note_supports_is_draft_flag(client: TestClient) -> None:
+    draft_resp = client.post(
+        '/note',
+        json={
+            'title': 'Draft By Boolean',
+            'content': 'draft content',
+            'tags': ['status'],
+            'images': [],
+            'type': 'note',
+            'is_draft': True,
+            'related': [],
+            'submitted_at': '2026-03-26T14:00:00+00:00',
+        },
+    )
+    assert draft_resp.status_code == 200
+    draft_result = draft_resp.json()['result']
+    assert draft_result['status'] == 'draft'
+
+    mature_resp = client.post(
+        '/note',
+        json={
+            'title': 'Mature By Boolean',
+            'content': 'mature content',
+            'tags': ['status'],
+            'images': [],
+            'type': 'note',
+            'is_draft': False,
+            'related': [],
+            'submitted_at': '2026-03-26T14:05:00+00:00',
+        },
+    )
+    assert mature_resp.status_code == 200
+    mature_result = mature_resp.json()['result']
+    assert mature_result['status'] == 'mature'
+
+
+def test_post_note_rejects_conflict_between_status_and_is_draft(client: TestClient) -> None:
+    response = client.post(
+        '/note',
+        json={
+            'title': 'Conflict Status',
+            'content': 'conflict',
+            'tags': [],
+            'images': [],
+            'type': 'note',
+            'status': 'mature',
+            'is_draft': True,
+            'related': [],
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()['detail'] == 'status conflicts with is_draft'
+
+
+def test_patch_note_status_and_list_drafts(client: TestClient) -> None:
+    mature_resp = client.post(
+        '/note',
+        json={
+            'title': 'Patch Status Mature',
+            'content': 'mature body',
+            'tags': ['workflow'],
+            'images': [],
+            'type': 'note',
+            'status': 'mature',
+            'related': [],
+            'submitted_at': '2026-03-26T15:00:00+00:00',
+        },
+    )
+    assert mature_resp.status_code == 200
+    mature_slug = mature_resp.json()['result']['slug']
+
+    draft_resp = client.post(
+        '/note',
+        json={
+            'title': 'Patch Status Draft',
+            'content': 'draft body',
+            'tags': ['workflow'],
+            'images': [],
+            'type': 'note',
+            'is_draft': True,
+            'related': [],
+            'submitted_at': '2026-03-26T15:05:00+00:00',
+        },
+    )
+    assert draft_resp.status_code == 200
+    draft_slug = draft_resp.json()['result']['slug']
+
+    patch_resp = client.patch(
+        f'/note/{mature_slug}/status',
+        json={
+            'is_draft': True,
+            'submitted_at': '2026-03-26T15:30:00+00:00',
+        },
+    )
+    assert patch_resp.status_code == 200
+    patched = patch_resp.json()['result']
+    assert patched['status'] == 'draft'
+    assert patched['updated_at'] == '2026-03-26T15:30:00+00:00'
+
+    drafts_resp = client.get('/notes/drafts')
+    assert drafts_resp.status_code == 200
+    drafts_payload = drafts_resp.json()
+    draft_slugs = [item['slug'] for item in drafts_payload['result']]
+    assert mature_slug in draft_slugs
+    assert draft_slug in draft_slugs
+    assert drafts_payload['count'] == 2
+
+    restore_resp = client.patch(
+        f'/note/{mature_slug}/status',
+        json={
+            'status': 'published',
+            'submitted_at': '2026-03-26T15:40:00+00:00',
+        },
+    )
+    assert restore_resp.status_code == 200
+    assert restore_resp.json()['result']['status'] == 'mature'
+
+
+def test_patch_note_status_requires_status_or_is_draft(client: TestClient) -> None:
+    create_resp = client.post(
+        '/note',
+        json={
+            'title': 'Patch Guard',
+            'content': 'guard',
+            'tags': [],
+            'images': [],
+            'type': 'note',
+            'related': [],
+            'submitted_at': '2026-03-26T16:10:00+00:00',
+        },
+    )
+    assert create_resp.status_code == 200
+    slug = create_resp.json()['result']['slug']
+
+    patch_resp = client.patch(
+        f'/note/{slug}/status',
+        json={'submitted_at': '2026-03-26T16:20:00+00:00'},
+    )
+    assert patch_resp.status_code == 400
+    assert patch_resp.json()['detail'] == 'status or is_draft must be provided'
+
+
 def test_word_count_includes_code_blocks_and_inline_code(client: TestClient) -> None:
     create_resp = client.post(
         '/note',

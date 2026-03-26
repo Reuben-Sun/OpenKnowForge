@@ -23,12 +23,19 @@ curl -X POST http://127.0.0.1:8000/note \
     "images": [],
     "type": "concept",
     "status": "mature",
+    "is_draft": false,
     "related": [],
     "submitted_at": "2026-03-26T10:00:00+00:00"
   }'
 ```
 
-`status` 可选值：`mature`（默认，成熟知识）或 `draft`（草稿）。
+`status` 可选值：`mature`（默认，成熟知识）或 `draft`（草稿）。  
+也可以直接使用 `is_draft`（`true/false`）设置是否为草稿。
+
+约束：
+
+- `status` 与 `is_draft` 可以二选一。
+- 两者同时传时必须语义一致，否则返回 `400`（`status conflicts with is_draft`）。
 
 返回重点字段：
 
@@ -78,7 +85,33 @@ curl -X PUT http://127.0.0.1:8000/note/<slug> \
   }'
 ```
 
-## 4) 删除笔记 `DELETE /note/{slug}`
+`PUT /note/{slug}` 同样支持 `is_draft`，用于在编辑正文时顺便切换状态。
+
+## 4) 仅修改状态 `PATCH /note/{slug}/status`
+
+只切换草稿/成熟状态，不改正文内容。
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/note/<slug>/status \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "is_draft": true,
+    "submitted_at": "2026-03-26T13:10:00+00:00"
+  }'
+```
+
+也可写成：
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/note/<slug>/status \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "status": "mature",
+    "submitted_at": "2026-03-26T13:20:00+00:00"
+  }'
+```
+
+## 5) 删除笔记 `DELETE /note/{slug}`
 
 删除笔记文件，并清理该笔记在正文中引用的本地图片资源（`/project/images/...`）。  
 删除后会自动重建索引并提交 git 记录。
@@ -108,4 +141,10 @@ curl http://127.0.0.1:8000/note/openknowforge
 
 ```bash
 curl http://127.0.0.1:8000/notes
+```
+
+只列出草稿：
+
+```bash
+curl http://127.0.0.1:8000/notes/drafts
 ```

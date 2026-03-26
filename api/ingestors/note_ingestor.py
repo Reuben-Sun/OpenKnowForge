@@ -250,6 +250,17 @@ class NoteIngestor(BaseIngestor):
         self._ensure_dirs()
         return self._collect_notes(include_excerpt=False)
 
+    def list_drafts(self) -> list[dict[str, Any]]:
+        self._ensure_dirs()
+        notes = self._collect_notes(include_excerpt=False)
+        return [item for item in notes if str(item.get("status", "")).strip().lower() == "draft"]
+
+    async def update_status(self, slug: str, status: str, submitted_at: Any = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"status": status}
+        if submitted_at is not None:
+            payload["submitted_at"] = submitted_at
+        return await self.update(slug, payload)
+
     def search(self, query: str = "", tag: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
         self._ensure_dirs()
         query_text = str(query).strip().lower()
