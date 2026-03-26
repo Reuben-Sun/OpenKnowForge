@@ -23,9 +23,8 @@ export default defineConfig({
         {
           text: 'Guide',
           items: [
-            { text: 'Guide', link: '/guide' },
             { text: 'API', link: '/guide/api' },
-            { text: 'Struture', link: '/guide/structure' }
+            { text: 'Structure', link: '/guide/structure' }
           ]
         }
       ],

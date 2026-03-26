@@ -1,11 +1,6 @@
 # Guide
 
-本区用于集中查看项目说明与 API 使用方式。
+本页暂不提供独立内容，请使用左侧目录中的：
 
-默认建议先阅读 [API 教程](/guide/api)，再看 [Struture](/guide/structure)。
-
-## 内容导航
-
-- [Guide](/guide)
 - [API](/guide/api)
-- [Struture](/guide/structure)
+- [Structure](/guide/structure)
