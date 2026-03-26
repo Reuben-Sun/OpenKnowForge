@@ -73,12 +73,13 @@ function buildTagStats(notes: NoteItem[]): TagStat[] {
   }
 
   const maxCount = Math.max(...entries.map(([, count]) => count))
-  const minSize = 14
-  const maxSize = 34
+  // Keep single-occurrence tags at normal body text size.
+  const minSize = 16
+  const maxSize = 22
 
   return entries
     .map(([tag, count]) => {
-      const ratio = maxCount <= 1 ? 1 : count / maxCount
+      const ratio = maxCount <= 1 ? 0 : (count - 1) / (maxCount - 1)
       const size = Math.round(minSize + (maxSize - minSize) * ratio)
       return {
         tag,
