@@ -1,6 +1,20 @@
 {
-  "generatedAt": "2026-03-26T12:02:20+00:00",
+  "generatedAt": "2026-03-26T12:10:28+00:00",
   "notes": [
+    {
+      "slug": "note",
+      "title": "美图分享",
+      "created_at": "2026-03-26T12:09:59+00:00",
+      "updated_at": "2026-03-26T12:09:59+00:00",
+      "submitted_at": "2026-03-26T12:09:59+00:00",
+      "date": "2026-03-26",
+      "tags": [
+        "image",
+        "share"
+      ],
+      "link": "/notes/note",
+      "excerpt": "美图分享 ## Images <img src=\"/assets/images/note-1-76363d4f6052.png\" alt=\"美图分享\" loading=\"lazy\" />"
+    },
     {
       "slug": "git-submodule-quick-notes",
       "title": "Git Submodule Quick Notes",
