@@ -115,3 +115,29 @@ img {
 .related-sidebar-mode .VPSidebar .nav > .group {
   display: none;
 }
+
+/*
+ * Keep deep outline levels visible while automatically collapsing
+ * inactive branches based on the current active heading.
+ */
+@supports selector(li:has(> a)) {
+  .VPDocAsideOutline .VPDocOutlineItem li > .VPDocOutlineItem.nested {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-2px);
+    transition: max-height 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .VPDocAsideOutline .VPDocOutlineItem li:has(> .outline-link.active) > .VPDocOutlineItem.nested,
+  .VPDocAsideOutline .VPDocOutlineItem li:has(> .VPDocOutlineItem.nested .outline-link.active)
+    > .VPDocOutlineItem.nested,
+  .VPDocAsideOutline .VPDocOutlineItem li:hover > .VPDocOutlineItem.nested,
+  .VPDocAsideOutline .VPDocOutlineItem li:focus-within > .VPDocOutlineItem.nested {
+    max-height: 1200px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}

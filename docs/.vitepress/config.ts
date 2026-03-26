@@ -39,6 +39,10 @@ const sharedSocialLinks: DefaultTheme.SocialLink[] = [
 
 const zhThemeConfig: DefaultTheme.Config = {
   langMenuLabel: '语言',
+  outline: {
+    label: '本页目录',
+    level: [2, 6]
+  },
   nav: [
     { text: '首页', link: '/' },
     { text: '笔记', link: '/notes/' },
@@ -73,6 +77,10 @@ const zhThemeConfig: DefaultTheme.Config = {
 
 const enThemeConfig: DefaultTheme.Config = {
   langMenuLabel: 'Language',
+  outline: {
+    label: 'On this page',
+    level: [2, 6]
+  },
   nav: [
     { text: 'Home', link: '/en/' },
     { text: 'Notes', link: '/en/notes/' },
