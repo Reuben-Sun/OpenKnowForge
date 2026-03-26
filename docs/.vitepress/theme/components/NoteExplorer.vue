@@ -21,6 +21,15 @@ const error = ref('')
 const POLL_INTERVAL_MS = 2500
 let pollTimer: number | undefined
 
+function applyQueryFromUrl(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const params = new URLSearchParams(window.location.search)
+  const raw = (params.get('q') || '').trim()
+  query.value = raw.startsWith('#') ? raw.slice(1) : raw
+}
+
 function parseTs(value?: string): number {
   if (!value) {
     return 0
@@ -92,8 +101,11 @@ async function loadNotes(isInitial: boolean): Promise<void> {
 }
 
 onMounted(async () => {
+  applyQueryFromUrl()
   await loadNotes(true)
   loading.value = false
+
+  window.addEventListener('popstate', applyQueryFromUrl)
 
   pollTimer = window.setInterval(() => {
     void loadNotes(false)
@@ -101,6 +113,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('popstate', applyQueryFromUrl)
   if (pollTimer !== undefined) {
     window.clearInterval(pollTimer)
   }

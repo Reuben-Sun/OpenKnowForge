@@ -111,6 +111,10 @@ const doubledRows = computed(() => {
   return rollingRows.value.map((row) => [...row, ...row])
 })
 
+function resolveTagLink(tag: string): string {
+  return withBase(`/notes/explorer?q=${encodeURIComponent(tag)}`)
+}
+
 async function loadTagStats(isInitial: boolean): Promise<void> {
   const candidates = Array.from(
     new Set([
@@ -168,21 +172,16 @@ onBeforeUnmount(() => {
 
     <div v-if="!loading && !error && doubledRows.length > 0" class="home-tag-stream__rows">
       <div v-for="(row, rowIndex) in doubledRows" :key="`row-${rowIndex}`" class="home-tag-stream__marquee-row">
-        <div
-          class="home-tag-stream__inner"
-          :style="{
-            animationDuration: `${28 + rowIndex * 7}s`,
-            animationDirection: rowIndex % 2 === 1 ? 'reverse' : 'normal'
-          }"
-        >
-          <span
+        <div class="home-tag-stream__inner">
+          <a
             v-for="(item, index) in row"
             :key="`${rowIndex}-${item.tag}-${index}`"
             class="home-tag-stream__tag"
+            :href="resolveTagLink(item.tag)"
             :style="{ fontSize: `${item.size}px`, color: item.color }"
           >
             #{{ item.tag }}
-          </span>
+          </a>
         </div>
       </div>
     </div>
@@ -239,9 +238,17 @@ onBeforeUnmount(() => {
 }
 
 .home-tag-stream__tag {
+  display: inline-block;
   font-weight: 700;
   line-height: 1.1;
+  text-decoration: none;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.home-tag-stream__tag:hover {
+  transform: translateY(-1px);
+  opacity: 0.86;
 }
 
 @keyframes home-tags-scroll {
