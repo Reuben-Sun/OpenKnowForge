@@ -4,6 +4,7 @@ import { h } from 'vue'
 import NoteExplorer from './components/NoteExplorer.vue'
 import NotesCards from './components/NotesCards.vue'
 import HomeTagStream from './components/HomeTagStream.vue'
+import HomeStatsCards from './components/HomeStatsCards.vue'
 import RelatedNotesSidebar from './components/RelatedNotesSidebar.vue'
 import NoteStatsBar from './components/NoteStatsBar.vue'
 import './custom.css'
@@ -19,6 +20,7 @@ const theme: Theme = {
     app.component('NoteExplorer', NoteExplorer)
     app.component('NotesCards', NotesCards)
     app.component('HomeTagStream', HomeTagStream)
+    app.component('HomeStatsCards', HomeStatsCards)
     app.component('RelatedNotesSidebar', RelatedNotesSidebar)
     app.component('NoteStatsBar', NoteStatsBar)
   }
