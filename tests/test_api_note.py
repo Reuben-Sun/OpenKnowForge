@@ -206,6 +206,44 @@ def test_put_note_updates_last_edited_and_sorting(client: TestClient) -> None:
     assert listed[1]['slug'] == b_slug
 
 
+def test_put_note_cleans_removed_local_images(client: TestClient, tmp_path: Path) -> None:
+    image_bytes = b'image-for-update-cleanup'
+    image_data_url = 'data:image/png;base64,' + base64.b64encode(image_bytes).decode('ascii')
+
+    create_resp = client.post(
+        '/note',
+        json={
+            'title': 'Cleanup On Update',
+            'content': 'has image',
+            'tags': ['cleanup'],
+            'images': [image_data_url],
+            'type': 'note',
+            'status': 'published',
+            'related': [],
+            'submitted_at': '2026-03-26T12:00:00+00:00',
+        },
+    )
+    assert create_resp.status_code == 200
+    slug = create_resp.json()['result']['slug']
+
+    image_files = list((tmp_path / 'docs' / 'project' / 'images').glob('*.png'))
+    assert len(image_files) == 1
+    assert image_files[0].exists()
+
+    update_resp = client.put(
+        f'/note/{slug}',
+        json={
+            'content': 'updated without image references',
+            'submitted_at': '2026-03-26T12:30:00+00:00',
+        },
+    )
+    assert update_resp.status_code == 200
+    updated_payload = update_resp.json()['result']
+    assert len(updated_payload['removed_images']) == 1
+
+    assert not image_files[0].exists()
+
+
 def test_search_notes_filters_by_query_and_tag(client: TestClient) -> None:
     client.post(
         '/note',

@@ -130,6 +130,7 @@ class NoteIngestor(BaseIngestor):
         submitted_at = self._normalize_timestamp(data.get("submitted_at"), default_now=True)
         created_at = self._normalize_timestamp(current.get("created_at"), default_now=False) or submitted_at
         updated_at = submitted_at
+        previous_image_paths = [str(item).strip() for item in current.get("image_paths") or []]
 
         saved_images = await self._save_images(data.get("images") or [], slug)
         if saved_images:
@@ -152,6 +153,9 @@ class NoteIngestor(BaseIngestor):
             submitted_at=submitted_at,
             images=[],
         )
+        latest_markdown = note_path.read_text(encoding="utf-8")
+        latest_image_paths = set(IMG_SRC_PATTERN.findall(latest_markdown))
+        removed_images = self._cleanup_images(previous_image_paths, keep_paths=latest_image_paths)
 
         self._rebuild_notes_index()
         self._rebuild_en_note_aliases()
@@ -164,6 +168,7 @@ class NoteIngestor(BaseIngestor):
             "note_path": str(note_path.relative_to(ROOT_DIR)),
             "image_count": len(saved_images),
             "image_paths": [img.markdown_path for img in saved_images],
+            "removed_images": removed_images,
             "created_at": created_at,
             "updated_at": updated_at,
             "submitted_at": submitted_at,
@@ -254,18 +259,7 @@ class NoteIngestor(BaseIngestor):
         note_path = self._resolve_note_path(slug)
 
         deleted_images: list[str] = []
-        for src in current.get("image_paths") or []:
-            image_src = str(src).strip()
-            if image_src.startswith("/project/images/"):
-                image_path = IMAGES_DIR / Path(image_src).name
-            elif image_src.startswith("/assets/images/"):
-                image_path = LEGACY_IMAGES_DIR / Path(image_src).name
-            else:
-                continue
-
-            if image_path.exists():
-                image_path.unlink()
-                deleted_images.append(str(image_path.relative_to(ROOT_DIR)))
+        deleted_images = self._cleanup_images(current.get("image_paths") or [], keep_paths=None)
 
         note_path.unlink()
         deleted_at = self._normalize_timestamp(None, default_now=True)
@@ -284,6 +278,26 @@ class NoteIngestor(BaseIngestor):
             "deleted_images": deleted_images,
             "git": commit,
         }
+
+    def _cleanup_images(self, image_paths: list[Any], keep_paths: set[str] | None) -> list[str]:
+        deleted: list[str] = []
+        keep = keep_paths or set()
+        for src in image_paths:
+            image_src = str(src).strip()
+            if not image_src or image_src in keep:
+                continue
+
+            if image_src.startswith("/project/images/"):
+                image_path = IMAGES_DIR / Path(image_src).name
+            elif image_src.startswith("/assets/images/"):
+                image_path = LEGACY_IMAGES_DIR / Path(image_src).name
+            else:
+                continue
+
+            if image_path.exists():
+                image_path.unlink()
+                deleted.append(str(image_path.relative_to(ROOT_DIR)))
+        return deleted
 
     def _ensure_dirs(self) -> None:
         UI_NOTES_ZH_DIR.mkdir(parents=True, exist_ok=True)
