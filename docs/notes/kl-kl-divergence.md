@@ -1,19 +1,19 @@
 ---
-title: "KL\u6563\u5EA6 KL-Divergence"
+title: "\u6570\u5B66\u516C\u5F0F\u793A\u4F8B"
 tags:
 - math
 - information-theory
 - kl-divergence
 created_at: '2026-03-26T12:36:50+00:00'
-updated_at: '2026-03-26T12:37:31+00:00'
-submitted_at: '2026-03-26T12:37:31+00:00'
+updated_at: '2026-03-26T13:02:27+00:00'
+submitted_at: '2026-03-26T13:02:27+00:00'
 date: '2026-03-26'
 type: concept
 status: published
 related: []
 ---
 
-# KL散度 KL-Divergence
+# 数学公式示例
 
 ### KL散度
 
