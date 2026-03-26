@@ -3,7 +3,6 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
-import html
 import json
 import re
 import subprocess
@@ -22,7 +21,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 DOCS_DIR = ROOT_DIR / "docs"
 NOTES_DIR = DOCS_DIR / "notes"
 IMAGES_DIR = DOCS_DIR / "assets" / "images"
-PUBLIC_DIR = DOCS_DIR / ".vitepress" / "public"
+PUBLIC_DIR = DOCS_DIR / "public"
 NOTES_INDEX_PATH = NOTES_DIR / "index.md"
 SEARCH_INDEX_PATH = PUBLIC_DIR / "search-index.json"
 
@@ -362,7 +361,6 @@ class NoteIngestor(BaseIngestor):
         return "\n".join(lines).strip()
 
     def _rebuild_notes_index(self) -> None:
-        notes = self._collect_notes()
         lines: list[str] = [
             "---",
             "title: Notes",
@@ -370,36 +368,12 @@ class NoteIngestor(BaseIngestor):
             "",
             "# Notes",
             "",
-            "Auto-generated note catalog as rounded cards.",
+            "Live note catalog as rounded cards.",
             "",
             "Use [Explore Notes](/notes/explorer) for a time-sorted title list.",
             "",
+            "<NotesCards />",
         ]
-
-        if not notes:
-            lines.append("No notes yet.")
-            NOTES_INDEX_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-            return
-
-        lines.append('<div class="notes-cards">')
-        for note in notes:
-            title = html.escape(note["title"])
-            updated_at = html.escape(note.get("updated_at") or "unknown")
-            created_at = html.escape(note.get("created_at") or "unknown")
-            tags_html = "".join(
-                f'<span class="note-card__tag">#{html.escape(tag)}</span>' for tag in note.get("tags", [])
-            )
-            lines.extend(
-                [
-                    f'  <a class="note-card" href="{note["link"]}">',
-                    f"    <h3>{title}</h3>",
-                    f"    <p class=\"note-card__time\">Last Edited: {updated_at}</p>",
-                    f"    <p class=\"note-card__time\">Created: {created_at}</p>",
-                    f"    <div class=\"note-card__tags\">{tags_html}</div>",
-                    "  </a>",
-                ]
-            )
-        lines.append("</div>")
 
         NOTES_INDEX_PATH.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
@@ -513,7 +487,7 @@ class NoteIngestor(BaseIngestor):
 
     def _git_commit(self, slug: str, action: str) -> dict[str, Any]:
         add = subprocess.run(
-            ["git", "add", "docs/notes", "docs/assets/images", "docs/.vitepress/public/search-index.json"],
+            ["git", "add", "docs/notes", "docs/assets/images", "docs/public/search-index.json"],
             cwd=ROOT_DIR,
             capture_output=True,
             text=True,

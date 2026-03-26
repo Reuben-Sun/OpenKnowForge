@@ -56,7 +56,7 @@ curl -X POST http://127.0.0.1:8000/note \
 
 写入后会自动生成：
 - `docs/notes/<slug>.md`
-- `docs/.vitepress/public/search-index.json`
+- `docs/public/search-index.json`
 - 可能的 git 自动提交（失败不阻塞写入）
 
 ## 4. 本地预览笔记站点
@@ -76,7 +76,7 @@ npm run docs:dev
 含义：前端没有拿到 `search-index.json`。
 排查顺序：
 1. 先确认至少写入过一条笔记（调用一次 `POST /note`）。
-2. 确认文件存在：`docs/.vitepress/public/search-index.json`。
+2. 确认文件存在：`docs/public/search-index.json`。
 3. 用 `npm run docs:dev` 方式启动预览，不要直接 `file://` 打开静态文件。
 4. 打开浏览器网络面板，确认 `search-index.json` 返回 200 且内容是 JSON。
 

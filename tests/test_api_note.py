@@ -15,7 +15,7 @@ def _override_paths(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
     docs_dir = root / 'docs'
     notes_dir = docs_dir / 'notes'
     images_dir = docs_dir / 'assets' / 'images'
-    public_dir = docs_dir / '.vitepress' / 'public'
+    public_dir = docs_dir / 'public'
 
     monkeypatch.setattr(note_ingestor, 'ROOT_DIR', root)
     monkeypatch.setattr(note_ingestor, 'DOCS_DIR', docs_dir)
@@ -78,16 +78,16 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
     assert '<img src="/assets/images/' in note_text
 
     notes_index_text = (tmp_path / 'docs' / 'notes' / 'index.md').read_text(encoding='utf-8')
-    assert 'class="notes-cards"' in notes_index_text
-    assert f'/notes/{slug}' in notes_index_text
+    assert '<NotesCards />' in notes_index_text
 
     image_files = list((tmp_path / 'docs' / 'assets' / 'images').glob('*.png'))
     assert len(image_files) == 1
 
-    search_index_path = tmp_path / 'docs' / '.vitepress' / 'public' / 'search-index.json'
+    search_index_path = tmp_path / 'docs' / 'public' / 'search-index.json'
     assert search_index_path.exists()
     search_index = json.loads(search_index_path.read_text(encoding='utf-8'))
     assert search_index['notes'][0]['title'] == 'Graph Theory'
+    assert search_index['notes'][0]['link'] == f'/notes/{slug}'
     assert 'math' in search_index['notes'][0]['tags']
     assert search_index['notes'][0]['updated_at'] == '2026-03-26T10:00:00+00:00'
 

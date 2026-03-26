@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { withBase } from 'vitepress'
 
 type NoteItem = {
@@ -17,6 +17,9 @@ const notes = ref<NoteItem[]>([])
 const query = ref('')
 const loading = ref(true)
 const error = ref('')
+
+const POLL_INTERVAL_MS = 2500
+let pollTimer: number | undefined
 
 function parseTs(value?: string): number {
   if (!value) {
@@ -56,35 +59,51 @@ function resolveLink(link: string): string {
   return withBase(`/notes/${link.replace(/^\.\//, '')}`)
 }
 
-onMounted(async () => {
+async function loadNotes(isInitial: boolean): Promise<void> {
   const candidates = Array.from(
-    new Set([withBase('/search-index.json'), './search-index.json', '/search-index.json'])
+    new Set([
+      withBase('/search-index.json'),
+      withBase('/.vitepress/public/search-index.json'),
+      '/search-index.json',
+      '/.vitepress/public/search-index.json'
+    ])
   )
 
-  let loaded = false
-  const tried: string[] = []
-
   for (const candidate of candidates) {
-    tried.push(candidate)
     try {
       const response = await fetch(candidate, { cache: 'no-store' })
       if (!response.ok) {
         continue
       }
+
       const payload = await response.json()
-      notes.value = sortByUpdatedDesc(Array.isArray(payload?.notes) ? payload.notes : [])
-      loaded = true
-      break
+      const next = sortByUpdatedDesc(Array.isArray(payload?.notes) ? payload.notes : [])
+      notes.value = next
+      error.value = ''
+      return
     } catch {
       continue
     }
   }
 
-  if (!loaded) {
-    error.value = `Failed to load search index. Tried: ${tried.join(', ')}`
+  if (isInitial) {
+    error.value = 'Failed to load search index. Check docs/public/search-index.json.'
   }
+}
 
+onMounted(async () => {
+  await loadNotes(true)
   loading.value = false
+
+  pollTimer = window.setInterval(() => {
+    void loadNotes(false)
+  }, POLL_INTERVAL_MS)
+})
+
+onBeforeUnmount(() => {
+  if (pollTimer !== undefined) {
+    window.clearInterval(pollTimer)
+  }
 })
 </script>
 

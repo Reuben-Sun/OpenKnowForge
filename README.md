@@ -118,6 +118,8 @@ npm install
 npm run docs:dev
 ```
 
+说明：`docs:dev` 默认开启文件轮询（polling），用于保证 API 写入新笔记后 Web 预览可热更新，无需重启 Web 服务。
+
 访问：
 
 - `http://127.0.0.1:5173/notes/`
