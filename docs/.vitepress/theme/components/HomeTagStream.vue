@@ -18,6 +18,8 @@ const error = ref('')
 const tagStats = ref<TagStat[]>([])
 
 const POLL_INTERVAL_MS = 3000
+const ROW_COUNT = 3
+const MIN_ROW_ITEMS = 18
 let pollTimer: number | undefined
 
 function stableHash(text: string): number {
@@ -31,8 +33,8 @@ function stableHash(text: string): number {
 function colorForTag(tag: string): string {
   const hash = stableHash(tag)
   const hue = hash % 360
-  const saturation = 64 + (hash % 14)
-  const lightness = 44 + ((hash >>> 4) % 16)
+  const saturation = 38 + (hash % 12)
+  const lightness = 42 + ((hash >>> 4) % 14)
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
@@ -71,7 +73,7 @@ function buildTagStats(notes: NoteItem[]): TagStat[] {
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
 }
 
-const rollingTags = computed(() => {
+const rollingRows = computed(() => {
   const repeated: TagStat[] = []
   for (const stat of tagStats.value) {
     const repeat = Math.max(1, Math.min(10, stat.count))
@@ -84,17 +86,30 @@ const rollingTags = computed(() => {
     return []
   }
 
-  const minItems = 40
-  let index = 0
-  while (repeated.length < minItems) {
-    repeated.push(repeated[index % repeated.length])
-    index += 1
-  }
+  const rows: TagStat[][] = Array.from({ length: ROW_COUNT }, () => [])
+  repeated.forEach((item, index) => {
+    rows[index % ROW_COUNT].push(item)
+  })
 
-  return repeated
+  return rows
+    .map((row) => {
+      if (row.length === 0) {
+        return []
+      }
+      const expanded = [...row]
+      let cursor = 0
+      while (expanded.length < MIN_ROW_ITEMS) {
+        expanded.push(row[cursor % row.length])
+        cursor += 1
+      }
+      return expanded
+    })
+    .filter((row) => row.length > 0)
 })
 
-const doubledRollingTags = computed(() => [...rollingTags.value, ...rollingTags.value])
+const doubledRows = computed(() => {
+  return rollingRows.value.map((row) => [...row, ...row])
+})
 
 async function loadTagStats(isInitial: boolean): Promise<void> {
   const candidates = Array.from(
@@ -149,18 +164,26 @@ onBeforeUnmount(() => {
     <h2 class="home-tag-stream__title">Notes Tag Stream</h2>
     <p v-if="loading" class="home-tag-stream__meta">Loading tags...</p>
     <p v-else-if="error" class="home-tag-stream__error">{{ error }}</p>
-    <p v-else-if="rollingTags.length === 0" class="home-tag-stream__meta">No tags yet.</p>
+    <p v-else-if="doubledRows.length === 0" class="home-tag-stream__meta">No tags yet.</p>
 
-    <div v-if="!loading && !error && rollingTags.length > 0" class="home-tag-stream__marquee">
-      <div class="home-tag-stream__inner">
-        <span
-          v-for="(item, index) in doubledRollingTags"
-          :key="`${item.tag}-${index}`"
-          class="home-tag-stream__tag"
-          :style="{ fontSize: `${item.size}px`, color: item.color }"
+    <div v-if="!loading && !error && doubledRows.length > 0" class="home-tag-stream__rows">
+      <div v-for="(row, rowIndex) in doubledRows" :key="`row-${rowIndex}`" class="home-tag-stream__marquee-row">
+        <div
+          class="home-tag-stream__inner"
+          :style="{
+            animationDuration: `${28 + rowIndex * 7}s`,
+            animationDirection: rowIndex % 2 === 1 ? 'reverse' : 'normal'
+          }"
         >
-          #{{ item.tag }}
-        </span>
+          <span
+            v-for="(item, index) in row"
+            :key="`${rowIndex}-${item.tag}-${index}`"
+            class="home-tag-stream__tag"
+            :style="{ fontSize: `${item.size}px`, color: item.color }"
+          >
+            #{{ item.tag }}
+          </span>
+        </div>
       </div>
     </div>
   </section>
@@ -191,7 +214,12 @@ onBeforeUnmount(() => {
   color: #b91c1c;
 }
 
-.home-tag-stream__marquee {
+.home-tag-stream__rows {
+  display: grid;
+  gap: 10px;
+}
+
+.home-tag-stream__marquee-row {
   overflow: hidden;
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
@@ -200,8 +228,8 @@ onBeforeUnmount(() => {
 .home-tag-stream__inner {
   width: max-content;
   display: flex;
-  align-items: baseline;
-  gap: 14px;
+  align-items: center;
+  gap: 16px;
   white-space: nowrap;
   animation: home-tags-scroll 36s linear infinite;
 }
