@@ -1,7 +1,23 @@
 import { defineConfig, type DefaultTheme } from 'vitepress'
 
-const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]
-const base = process.env.GITHUB_ACTIONS === 'true' && repoName ? `/${repoName}/` : '/'
+const normalizeBasePath = (value: string): string => {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return '/'
+  }
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`
+}
+
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]?.trim()
+const explicitBase = process.env.VITEPRESS_BASE?.trim()
+const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+const isUserOrOrgSiteRepo = Boolean(repoName && repoName.toLowerCase().endsWith('.github.io'))
+const base = explicitBase
+  ? normalizeBasePath(explicitBase)
+  : isGitHubActions && repoName && !isUserOrOrgSiteRepo
+    ? normalizeBasePath(repoName)
+    : '/'
 
 const sharedSocialLinks: DefaultTheme.SocialLink[] = [
   { icon: 'github', link: 'https://github.com/Reuben-Sun/OpenKnowForge' }

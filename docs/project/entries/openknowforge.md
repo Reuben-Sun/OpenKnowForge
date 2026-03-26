@@ -10,10 +10,10 @@ tags:
 - vitepress
 - ci
 created_at: '2026-03-26T00:00:00+00:00'
-updated_at: '2026-03-26T16:53:40+00:00'
-submitted_at: '2026-03-26T16:53:40+00:00'
+updated_at: '2026-03-26T16:56:48+00:00'
+submitted_at: '2026-03-26T16:56:48+00:00'
 date: '2026-03-26'
-word_count: 341
+word_count: 484
 image_count: 0
 type: guide
 status: published
@@ -48,16 +48,25 @@ npm run docs:dev
 
 ### 1. 配置 VitePress base（关键）
 
-本项目的 `docs/.vitepress/config.ts` 已经自动处理 `base`，不需要手动写死：
+本项目默认已自动处理 `base`，fork 后一般不需要改代码：
 
 ```ts
-const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]
-const base = process.env.GITHUB_ACTIONS === 'true' && repoName ? `/${repoName}/` : '/'
+const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]?.trim()
+const explicitBase = process.env.VITEPRESS_BASE?.trim()
+const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+const isUserOrOrgSiteRepo = Boolean(repoName && repoName.toLowerCase().endsWith('.github.io'))
+const base = explicitBase
+  ? normalizeBasePath(explicitBase)
+  : isGitHubActions && repoName && !isUserOrOrgSiteRepo
+    ? normalizeBasePath(repoName)
+    : '/'
 ```
 
 含义：
 1. 本地开发时使用 `base: '/'`。
-2. GitHub Actions 构建时自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
+2. 在 GitHub Actions 构建项目页时，自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
+3. 如果仓库名是 `xxx.github.io`（用户/组织主页），自动使用 `base: '/'`。
+4. 需要手动覆盖时，设置环境变量 `VITEPRESS_BASE`（例如 `/docs/` 或 `/`）。
 
 ### 2. 启用 GitHub Pages
 
@@ -72,6 +81,13 @@ const base = process.env.GITHUB_ACTIONS === 'true' && repoName ? `/${repoName}/`
 每次 `commit` 并推送到 `main` 后，GitHub Actions 会自动触发 Pages 部署。
 
 ## 常见问题
+
+### fork 后需要改什么？
+
+1. 必做：在 `Settings -> Pages` 把 Source 设为 `GitHub Actions`。
+2. 必做：将代码推送到 `main`，触发自动部署。
+3. 可选：把站点中的 GitHub 链接改成你自己的仓库地址。
+4. 通常不需要手改 `base`；仅在特殊路径部署时才通过 `VITEPRESS_BASE` 覆盖。
 
 ### Failed to load search index. Create notes via POST /note first.
 
