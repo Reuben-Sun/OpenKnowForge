@@ -4,6 +4,6 @@ title: Explore Notes
 
 # Explore Notes
 
-Use this page to filter by tag and search instantly from the generated `search-index.json`.
+Use this page for a title list sorted by `updated_at` (latest first), powered by `search-index.json`.
 
 <NoteExplorer />

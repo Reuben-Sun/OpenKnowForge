@@ -3,45 +3,47 @@ import { computed, onMounted, ref } from 'vue'
 import { withBase } from 'vitepress'
 
 type NoteItem = {
+  slug?: string
   title: string
-  date: string
-  tags: string[]
+  date?: string
+  created_at?: string
+  updated_at?: string
+  submitted_at?: string
+  tags?: string[]
   link: string
-  excerpt?: string
 }
 
 const notes = ref<NoteItem[]>([])
 const query = ref('')
-const activeTag = ref('all')
 const loading = ref(true)
 const error = ref('')
 
-const availableTags = computed(() => {
-  const tagSet = new Set<string>()
-  for (const note of notes.value) {
-    for (const tag of note.tags || []) {
-      tagSet.add(tag)
-    }
+function parseTs(value?: string): number {
+  if (!value) {
+    return 0
   }
-  return ['all', ...Array.from(tagSet).sort((a, b) => a.localeCompare(b))]
-})
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function sortByUpdatedDesc(items: NoteItem[]): NoteItem[] {
+  return [...items].sort((a, b) => {
+    const aTs = parseTs(a.updated_at || a.date)
+    const bTs = parseTs(b.updated_at || b.date)
+    return bTs - aTs
+  })
+}
 
 const filteredNotes = computed(() => {
   const q = query.value.trim().toLowerCase()
+  const base = q
+    ? notes.value.filter((note) => {
+        const haystack = [note.title, ...(note.tags || [])].join(' ').toLowerCase()
+        return haystack.includes(q)
+      })
+    : notes.value
 
-  return notes.value.filter((note) => {
-    const matchesTag = activeTag.value === 'all' || (note.tags || []).includes(activeTag.value)
-    if (!matchesTag) {
-      return false
-    }
-
-    if (!q) {
-      return true
-    }
-
-    const haystack = [note.title, note.excerpt || '', ...(note.tags || [])].join(' ').toLowerCase()
-    return haystack.includes(q)
-  })
+  return sortByUpdatedDesc(base)
 })
 
 function resolveLink(link: string): string {
@@ -55,18 +57,34 @@ function resolveLink(link: string): string {
 }
 
 onMounted(async () => {
-  try {
-    const response = await fetch(withBase('/search-index.json'), { cache: 'no-store' })
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
+  const candidates = Array.from(
+    new Set([withBase('/search-index.json'), './search-index.json', '/search-index.json'])
+  )
+
+  let loaded = false
+  const tried: string[] = []
+
+  for (const candidate of candidates) {
+    tried.push(candidate)
+    try {
+      const response = await fetch(candidate, { cache: 'no-store' })
+      if (!response.ok) {
+        continue
+      }
+      const payload = await response.json()
+      notes.value = sortByUpdatedDesc(Array.isArray(payload?.notes) ? payload.notes : [])
+      loaded = true
+      break
+    } catch {
+      continue
     }
-    const payload = await response.json()
-    notes.value = Array.isArray(payload?.notes) ? payload.notes : []
-  } catch {
-    error.value = 'Failed to load search index. Create notes via POST /note first.'
-  } finally {
-    loading.value = false
   }
+
+  if (!loaded) {
+    error.value = `Failed to load search index. Tried: ${tried.join(', ')}`
+  }
+
+  loading.value = false
 })
 </script>
 
@@ -77,19 +95,8 @@ onMounted(async () => {
         v-model="query"
         class="note-explorer__search"
         type="search"
-        placeholder="Search title, tags, excerpt..."
+        placeholder="Search titles or tags..."
       />
-      <div class="note-explorer__tags">
-        <button
-          v-for="tag in availableTags"
-          :key="tag"
-          class="note-explorer__tag"
-          :class="{ 'is-active': tag === activeTag }"
-          @click="activeTag = tag"
-        >
-          {{ tag === 'all' ? 'all tags' : tag }}
-        </button>
-      </div>
     </div>
 
     <p v-if="loading" class="note-explorer__meta">Loading notes...</p>
@@ -98,16 +105,15 @@ onMounted(async () => {
       {{ filteredNotes.length }} / {{ notes.length }} notes
     </p>
 
-    <ul v-if="!loading && !error" class="note-explorer__list">
-      <li v-for="note in filteredNotes" :key="`${note.link}-${note.date}`" class="note-explorer__item">
+    <ol v-if="!loading && !error" class="note-explorer__list">
+      <li v-for="note in filteredNotes" :key="`${note.link}-${note.updated_at || note.date}`" class="note-explorer__item">
         <a :href="resolveLink(note.link)" class="note-explorer__title">{{ note.title }}</a>
-        <div class="note-explorer__date">{{ note.date || 'unknown date' }}</div>
-        <p v-if="note.excerpt" class="note-explorer__excerpt">{{ note.excerpt }}</p>
-        <div class="note-explorer__chips">
-          <span v-for="tag in note.tags" :key="tag" class="note-explorer__chip">#{{ tag }}</span>
+        <div class="note-explorer__time-row">
+          <span class="note-explorer__time">Last edited: {{ note.updated_at || note.date || 'unknown' }}</span>
+          <span class="note-explorer__time">Created: {{ note.created_at || 'unknown' }}</span>
         </div>
       </li>
-    </ul>
+    </ol>
   </section>
 </template>
 
@@ -132,27 +138,6 @@ onMounted(async () => {
   background: #fff;
 }
 
-.note-explorer__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.note-explorer__tag {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 999px;
-  padding: 4px 10px;
-  cursor: pointer;
-  background: #fff;
-  font-size: 13px;
-}
-
-.note-explorer__tag.is-active {
-  border-color: var(--vp-c-brand-1);
-  color: var(--vp-c-brand-1);
-  background: rgba(13, 148, 136, 0.08);
-}
-
 .note-explorer__meta,
 .note-explorer__error {
   margin-top: 12px;
@@ -166,17 +151,13 @@ onMounted(async () => {
 
 .note-explorer__list {
   margin: 0;
-  padding: 0;
-  list-style: none;
+  padding-left: 20px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .note-explorer__item {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
+  padding: 6px 0;
 }
 
 .note-explorer__title {
@@ -184,30 +165,16 @@ onMounted(async () => {
   text-decoration: none;
 }
 
-.note-explorer__date {
-  margin-top: 4px;
-  color: var(--vp-c-text-2);
-  font-size: 13px;
-}
-
-.note-explorer__excerpt {
-  margin: 8px 0;
-  color: var(--vp-c-text-2);
-  font-size: 14px;
-}
-
-.note-explorer__chips {
+.note-explorer__time-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.note-explorer__chip {
-  border-radius: 999px;
-  background: #f0fdfa;
-  color: #0f766e;
+.note-explorer__time {
+  color: var(--vp-c-text-2);
   font-size: 12px;
-  padding: 2px 8px;
 }
 
 .dark .note-explorer {
@@ -215,16 +182,9 @@ onMounted(async () => {
   border-color: rgba(148, 163, 184, 0.28);
 }
 
-.dark .note-explorer__search,
-.dark .note-explorer__tag,
-.dark .note-explorer__item {
+.dark .note-explorer__search {
   background: rgba(15, 23, 42, 0.8);
   border-color: rgba(148, 163, 184, 0.28);
-}
-
-.dark .note-explorer__chip {
-  background: rgba(13, 148, 136, 0.2);
-  color: #99f6e4;
 }
 
 .dark .note-explorer__error {

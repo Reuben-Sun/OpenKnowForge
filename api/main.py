@@ -14,9 +14,21 @@ class NotePayload(BaseModel):
     type: str = Field(default="note")
     status: str = Field(default="draft")
     related: list[str] = Field(default_factory=list)
+    submitted_at: str | None = Field(default=None)
 
 
-app = FastAPI(title="OpenKnowForge API", version="0.1.0")
+class NoteEditPayload(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    content: str | None = Field(default=None)
+    tags: list[str] | None = Field(default=None)
+    images: list[str] | None = Field(default=None)
+    type: str | None = Field(default=None)
+    status: str | None = Field(default=None)
+    related: list[str] | None = Field(default=None)
+    submitted_at: str | None = Field(default=None)
+
+
+app = FastAPI(title="OpenKnowForge API", version="0.2.0")
 
 
 @app.get("/health")
@@ -27,10 +39,54 @@ async def health() -> dict[str, str]:
 @app.post("/note")
 async def create_note(payload: NotePayload) -> dict[str, object]:
     ingestor = NoteIngestor()
-    payload_data = payload.model_dump()
+    payload_data = payload.model_dump(exclude_none=True)
     payload_data["note_type"] = payload_data.pop("type")
     try:
         result = await ingestor.ingest(payload_data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {"ok": True, "result": result}
+
+
+@app.get("/notes")
+async def list_notes() -> dict[str, object]:
+    ingestor = NoteIngestor()
+    try:
+        notes = ingestor.list_notes()
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {"ok": True, "result": notes}
+
+
+@app.get("/note/{slug}")
+async def read_note(slug: str) -> dict[str, object]:
+    ingestor = NoteIngestor()
+    try:
+        result = ingestor.read(slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {"ok": True, "result": result}
+
+
+@app.put("/note/{slug}")
+async def edit_note(slug: str, payload: NoteEditPayload) -> dict[str, object]:
+    ingestor = NoteIngestor()
+    payload_data = payload.model_dump(exclude_none=True)
+    if not payload_data:
+        raise HTTPException(status_code=400, detail="at least one field must be provided")
+    if "type" in payload_data:
+        payload_data["note_type"] = payload_data.pop("type")
+
+    try:
+        result = await ingestor.update(slug, payload_data)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive handling

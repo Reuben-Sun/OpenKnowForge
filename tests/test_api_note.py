@@ -27,8 +27,13 @@ def _override_paths(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
 
 
 def _disable_git_commit(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_commit(self: note_ingestor.NoteIngestor, slug: str) -> dict[str, object]:
-        return {'committed': False, 'message': f'disabled in test for {slug}'}
+    def fake_commit(self: note_ingestor.NoteIngestor, slug: str, action: str) -> dict[str, object]:
+        return {
+            'committed': False,
+            'message': f'disabled in test for {action}:{slug}',
+            'hash': '',
+            'committed_at': '',
+        }
 
     monkeypatch.setattr(note_ingestor.NoteIngestor, '_git_commit', fake_commit)
 
@@ -54,6 +59,7 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
             'type': 'concept',
             'status': 'draft',
             'related': ['combinatorics'],
+            'submitted_at': '2026-03-26T10:00:00+00:00',
         },
     )
 
@@ -66,8 +72,14 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
     note_text = note_path.read_text(encoding='utf-8')
     assert '# Graph Theory' in note_text
     assert 'title: Graph Theory' in note_text
+    assert 'created_at: ' in note_text
+    assert 'updated_at: ' in note_text
+    assert 'submitted_at: ' in note_text
     assert '<img src="/assets/images/' in note_text
-    assert f'/notes/{slug}' in (tmp_path / 'docs' / 'notes' / 'index.md').read_text(encoding='utf-8')
+
+    notes_index_text = (tmp_path / 'docs' / 'notes' / 'index.md').read_text(encoding='utf-8')
+    assert 'class="notes-cards"' in notes_index_text
+    assert f'/notes/{slug}' in notes_index_text
 
     image_files = list((tmp_path / 'docs' / 'assets' / 'images').glob('*.png'))
     assert len(image_files) == 1
@@ -77,6 +89,95 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
     search_index = json.loads(search_index_path.read_text(encoding='utf-8'))
     assert search_index['notes'][0]['title'] == 'Graph Theory'
     assert 'math' in search_index['notes'][0]['tags']
+    assert search_index['notes'][0]['updated_at'] == '2026-03-26T10:00:00+00:00'
+
+    assert payload['created_at'] == '2026-03-26T10:00:00+00:00'
+    assert payload['updated_at'] == '2026-03-26T10:00:00+00:00'
+    assert payload['submitted_at'] == '2026-03-26T10:00:00+00:00'
+
+
+def test_get_note_returns_structured_note(client: TestClient) -> None:
+    create = client.post(
+        '/note',
+        json={
+            'title': 'Read API Test',
+            'content': 'Initial content',
+            'tags': ['api'],
+            'images': [],
+            'type': 'note',
+            'status': 'draft',
+            'related': [],
+            'submitted_at': '2026-03-26T09:00:00+00:00',
+        },
+    )
+    assert create.status_code == 200
+    slug = create.json()['result']['slug']
+
+    response = client.get(f'/note/{slug}')
+    assert response.status_code == 200
+
+    note = response.json()['result']
+    assert note['slug'] == slug
+    assert note['title'] == 'Read API Test'
+    assert note['content'] == 'Initial content'
+    assert note['created_at'] == '2026-03-26T09:00:00+00:00'
+    assert note['updated_at'] == '2026-03-26T09:00:00+00:00'
+
+
+def test_put_note_updates_last_edited_and_sorting(client: TestClient) -> None:
+    a_resp = client.post(
+        '/note',
+        json={
+            'title': 'Alpha Note',
+            'content': 'alpha',
+            'tags': ['series'],
+            'images': [],
+            'type': 'note',
+            'status': 'draft',
+            'related': [],
+            'submitted_at': '2026-03-26T09:00:00+00:00',
+        },
+    )
+    assert a_resp.status_code == 200
+    a_slug = a_resp.json()['result']['slug']
+
+    b_resp = client.post(
+        '/note',
+        json={
+            'title': 'Beta Note',
+            'content': 'beta',
+            'tags': ['series'],
+            'images': [],
+            'type': 'note',
+            'status': 'draft',
+            'related': [],
+            'submitted_at': '2026-03-26T10:00:00+00:00',
+        },
+    )
+    assert b_resp.status_code == 200
+    b_slug = b_resp.json()['result']['slug']
+
+    edit_resp = client.put(
+        f'/note/{a_slug}',
+        json={
+            'content': 'alpha updated',
+            'status': 'published',
+            'submitted_at': '2026-03-26T12:30:00+00:00',
+        },
+    )
+    assert edit_resp.status_code == 200
+
+    edited_note = client.get(f'/note/{a_slug}').json()['result']
+    assert edited_note['content'] == 'alpha updated'
+    assert edited_note['status'] == 'published'
+    assert edited_note['created_at'] == '2026-03-26T09:00:00+00:00'
+    assert edited_note['updated_at'] == '2026-03-26T12:30:00+00:00'
+
+    list_resp = client.get('/notes')
+    assert list_resp.status_code == 200
+    listed = list_resp.json()['result']
+    assert listed[0]['slug'] == a_slug
+    assert listed[1]['slug'] == b_slug
 
 
 def test_post_note_rejects_invalid_image_payload(client: TestClient) -> None:

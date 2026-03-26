@@ -1,8 +1,12 @@
 {
-  "generatedAt": "2026-03-26T11:27:31.151723+00:00",
+  "generatedAt": "2026-03-26T11:43:35+00:00",
   "notes": [
     {
+      "slug": "openknowforge",
       "title": "OpenKnowForge 项目使用方法（本地开发与预览）",
+      "created_at": "2026-03-26T00:00:00+00:00",
+      "updated_at": "2026-03-26T00:00:00+00:00",
+      "submitted_at": "2026-03-26T00:00:00+00:00",
       "date": "2026-03-26",
       "tags": [
         "guide",
@@ -11,14 +15,7 @@
         "local-dev"
       ],
       "link": "/notes/openknowforge",
-      "excerpt": "# OpenKnowForge 项目使用方法（本地开发与预览） ## 1. 准备环境（micromamba） ```bash micromamba create -y -n openknowforge python=3.11 micromamba run -n openknowforge pip install -r requirements.txt -r requirements-dev.txt"
-    },
-    {
-      "title": "Explore Notes",
-      "date": "",
-      "tags": [],
-      "link": "/notes/explorer",
-      "excerpt": "# Explore Notes Use this page to filter by tag and search instantly from the generated `search-index.json`. <NoteExplorer />"
+      "excerpt": "## 1. 准备环境（micromamba） ```bash micromamba create -y -n openknowforge python=3.11 micromamba run -n openknowforge pip install -r requirements.txt -r requirements-dev.txt ``` ## 2. 启动 API ```bash microm"
     }
   ]
 }

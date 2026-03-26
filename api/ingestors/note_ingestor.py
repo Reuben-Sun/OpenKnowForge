@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import html
 import json
 import re
 import subprocess
@@ -27,6 +28,9 @@ SEARCH_INDEX_PATH = PUBLIC_DIR / "search-index.json"
 
 DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[-\w.]+/[-\w.+]+);base64,(?P<data>.+)$")
 FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+SLUG_PATTERN = re.compile(r"^[a-z0-9-]+$")
+IMG_SRC_PATTERN = re.compile(r'<img\s+[^>]*src="([^"]+)"', re.IGNORECASE)
+RESERVED_NOTE_FILES = {"index.md", "explorer.md"}
 
 
 @dataclass
@@ -49,6 +53,10 @@ class NoteIngestor(BaseIngestor):
         note_type = str(data.get("note_type", "note")).strip() or "note"
         status = str(data.get("status", "draft")).strip() or "draft"
 
+        submitted_at = self._normalize_timestamp(data.get("submitted_at"), default_now=True)
+        created_at = submitted_at
+        updated_at = submitted_at
+
         slug = self._build_note_slug(title)
         saved_images = await self._save_images(data.get("images") or [], slug)
         note_path = self._write_note(
@@ -59,21 +67,144 @@ class NoteIngestor(BaseIngestor):
             related=related,
             note_type=note_type,
             status=status,
+            created_at=created_at,
+            updated_at=updated_at,
+            submitted_at=submitted_at,
             images=saved_images,
         )
 
         self._rebuild_notes_index()
         self._rebuild_search_index()
 
-        commit = self._git_commit(slug)
+        commit = self._git_commit(slug, action="add")
 
         return {
             "slug": slug,
             "note_path": str(note_path.relative_to(ROOT_DIR)),
             "image_count": len(saved_images),
             "image_paths": [img.markdown_path for img in saved_images],
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "submitted_at": submitted_at,
             "git": commit,
         }
+
+    async def update(self, slug: str, data: dict[str, Any]) -> dict[str, Any]:
+        self._ensure_dirs()
+        current = self.read(slug)
+
+        title = str(data.get("title", current["title"]))
+        title = title.strip()
+        if not title:
+            raise ValueError("title is required")
+
+        content = str(data.get("content", current["content"]))
+        content = content.strip()
+
+        tags = (
+            self._normalize_list(data.get("tags"))
+            if "tags" in data
+            else self._normalize_list(current.get("tags"))
+        )
+        related = (
+            self._normalize_list(data.get("related"))
+            if "related" in data
+            else self._normalize_list(current.get("related"))
+        )
+
+        note_type = str(data.get("note_type", current["type"])).strip() or "note"
+        status = str(data.get("status", current["status"])).strip() or "draft"
+
+        submitted_at = self._normalize_timestamp(data.get("submitted_at"), default_now=True)
+        created_at = self._normalize_timestamp(current.get("created_at"), default_now=False) or submitted_at
+        updated_at = submitted_at
+
+        saved_images = await self._save_images(data.get("images") or [], slug)
+        if saved_images:
+            image_lines = [f'<img src="{img.markdown_path}" alt="{title}" loading="lazy" />' for img in saved_images]
+            if content:
+                content = content.rstrip() + "\n\n## Images\n\n" + "\n".join(image_lines)
+            else:
+                content = "## Images\n\n" + "\n".join(image_lines)
+
+        note_path = self._write_note(
+            slug=slug,
+            title=title,
+            content=content,
+            tags=tags,
+            related=related,
+            note_type=note_type,
+            status=status,
+            created_at=created_at,
+            updated_at=updated_at,
+            submitted_at=submitted_at,
+            images=[],
+        )
+
+        self._rebuild_notes_index()
+        self._rebuild_search_index()
+
+        commit = self._git_commit(slug, action="update")
+
+        return {
+            "slug": slug,
+            "note_path": str(note_path.relative_to(ROOT_DIR)),
+            "image_count": len(saved_images),
+            "image_paths": [img.markdown_path for img in saved_images],
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "submitted_at": submitted_at,
+            "git": commit,
+        }
+
+    def read(self, slug: str) -> dict[str, Any]:
+        self._ensure_dirs()
+        path = self._resolve_note_path(slug)
+        text = path.read_text(encoding="utf-8")
+
+        frontmatter = self._extract_frontmatter(text)
+        markdown_body = FRONTMATTER_PATTERN.sub("", text).strip()
+
+        title = str(frontmatter.get("title") or path.stem)
+        tags = self._normalize_list(frontmatter.get("tags"))
+        related = self._normalize_list(frontmatter.get("related"))
+        note_type = str(frontmatter.get("type") or "note")
+        status = str(frontmatter.get("status") or "draft")
+
+        created_at = self._normalize_timestamp(
+            frontmatter.get("created_at") or frontmatter.get("date"),
+            default_now=False,
+        )
+        updated_at = self._normalize_timestamp(
+            frontmatter.get("updated_at") or created_at or frontmatter.get("date"),
+            default_now=False,
+        )
+        submitted_at = self._normalize_timestamp(
+            frontmatter.get("submitted_at") or updated_at or created_at,
+            default_now=False,
+        )
+
+        content = self._extract_content_from_markdown(markdown_body)
+        image_paths = IMG_SRC_PATTERN.findall(markdown_body)
+
+        return {
+            "slug": path.stem,
+            "path": str(path.relative_to(ROOT_DIR)),
+            "title": title,
+            "content": content,
+            "tags": tags,
+            "type": note_type,
+            "status": status,
+            "related": related,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "submitted_at": submitted_at,
+            "image_paths": image_paths,
+        }
+
+    def list_notes(self) -> list[dict[str, Any]]:
+        self._ensure_dirs()
+        return self._collect_notes(include_excerpt=False)
 
     def _ensure_dirs(self) -> None:
         NOTES_DIR.mkdir(parents=True, exist_ok=True)
@@ -107,6 +238,16 @@ class NoteIngestor(BaseIngestor):
             candidate = f"{slug}-{counter}"
             counter += 1
         return candidate
+
+    def _resolve_note_path(self, slug: str) -> Path:
+        normalized = slug.strip().lower()
+        if not normalized or not SLUG_PATTERN.match(normalized):
+            raise ValueError("invalid slug")
+
+        target = NOTES_DIR / f"{normalized}.md"
+        if not target.exists() or target.name in RESERVED_NOTE_FILES:
+            raise FileNotFoundError(f"note '{normalized}' not found")
+        return target
 
     async def _save_images(self, images: list[str], slug: str) -> list[SavedImage]:
         saved: list[SavedImage] = []
@@ -176,13 +317,18 @@ class NoteIngestor(BaseIngestor):
         related: list[str],
         note_type: str,
         status: str,
+        created_at: str,
+        updated_at: str,
+        submitted_at: str,
         images: list[SavedImage],
     ) -> Path:
-        today = datetime.now(timezone.utc).date().isoformat()
         frontmatter = {
             "title": title,
             "tags": tags,
-            "date": today,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "submitted_at": submitted_at,
+            "date": (updated_at or created_at)[:10],
             "type": note_type,
             "status": status,
             "related": related,
@@ -192,20 +338,28 @@ class NoteIngestor(BaseIngestor):
         for img in images:
             image_lines.append(f'<img src="{img.markdown_path}" alt="{title}" loading="lazy" />')
 
-        body_parts = [
-            "# " + title,
-            "",
-            content if content else "",
-        ]
+        body_lines: list[str] = ["# " + title, ""]
+        if content:
+            body_lines.append(content.rstrip())
         if image_lines:
-            body_parts.extend(["", "## Images", "", *image_lines])
+            if content:
+                body_lines.append("")
+            body_lines.extend(["## Images", "", *image_lines])
 
         frontmatter_block = "---\n" + yaml.safe_dump(frontmatter, sort_keys=False).strip() + "\n---"
-        markdown = frontmatter_block + "\n\n" + "\n".join(body_parts).rstrip() + "\n"
+        markdown = frontmatter_block + "\n\n" + "\n".join(body_lines).rstrip() + "\n"
 
         note_path = NOTES_DIR / f"{slug}.md"
         note_path.write_text(markdown, encoding="utf-8")
         return note_path
+
+    def _extract_content_from_markdown(self, markdown_body: str) -> str:
+        lines = markdown_body.splitlines()
+        if lines and lines[0].startswith("# "):
+            lines = lines[1:]
+            if lines and not lines[0].strip():
+                lines = lines[1:]
+        return "\n".join(lines).strip()
 
     def _rebuild_notes_index(self) -> None:
         notes = self._collect_notes()
@@ -216,9 +370,9 @@ class NoteIngestor(BaseIngestor):
             "",
             "# Notes",
             "",
-            "Auto-generated note catalog.",
+            "Auto-generated note catalog as rounded cards.",
             "",
-            "Use [Explore Notes](/notes/explorer) for tag filtering and instant search.",
+            "Use [Explore Notes](/notes/explorer) for a time-sorted title list.",
             "",
         ]
 
@@ -227,32 +381,34 @@ class NoteIngestor(BaseIngestor):
             NOTES_INDEX_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
             return
 
-        lines.extend(["## By Date", ""])
+        lines.append('<div class="notes-cards">')
         for note in notes:
-            lines.append(
-                f"- [{note['title']}]({note['link']}) - `{note['date']}`"
+            title = html.escape(note["title"])
+            updated_at = html.escape(note.get("updated_at") or "unknown")
+            created_at = html.escape(note.get("created_at") or "unknown")
+            tags_html = "".join(
+                f'<span class="note-card__tag">#{html.escape(tag)}</span>' for tag in note.get("tags", [])
             )
-
-        tag_map: dict[str, list[dict[str, str]]] = {}
-        for note in notes:
-            for tag in note["tags"]:
-                tag_map.setdefault(tag, []).append(note)
-
-        lines.extend(["", "## By Tag", ""])
-        if not tag_map:
-            lines.append("No tags yet.")
-        else:
-            for tag in sorted(tag_map):
-                lines.append(f"### {tag}")
-                for note in tag_map[tag]:
-                    lines.append(f"- [{note['title']}]({note['link']})")
-                lines.append("")
+            lines.extend(
+                [
+                    f'  <a class="note-card" href="{note["link"]}">',
+                    f"    <h3>{title}</h3>",
+                    f"    <p class=\"note-card__time\">Last Edited: {updated_at}</p>",
+                    f"    <p class=\"note-card__time\">Created: {created_at}</p>",
+                    f"    <div class=\"note-card__tags\">{tags_html}</div>",
+                    "  </a>",
+                ]
+            )
+        lines.append("</div>")
 
         NOTES_INDEX_PATH.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
     def _rebuild_search_index(self) -> None:
         notes = self._collect_notes(include_excerpt=True)
-        payload = {"generatedAt": datetime.now(timezone.utc).isoformat(), "notes": notes}
+        payload = {
+            "generatedAt": self._normalize_timestamp(None, default_now=True),
+            "notes": notes,
+        }
         SEARCH_INDEX_PATH.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
@@ -261,31 +417,53 @@ class NoteIngestor(BaseIngestor):
     def _collect_notes(self, include_excerpt: bool = False) -> list[dict[str, Any]]:
         notes: list[dict[str, Any]] = []
         for path in sorted(NOTES_DIR.glob("*.md")):
-            if path.name == "index.md":
+            if path.name in RESERVED_NOTE_FILES:
                 continue
+
             text = path.read_text(encoding="utf-8")
             frontmatter = self._extract_frontmatter(text)
             title = str(frontmatter.get("title") or path.stem)
-            date = str(frontmatter.get("date") or "")
+
+            created_at = self._normalize_timestamp(
+                frontmatter.get("created_at") or frontmatter.get("date"),
+                default_now=False,
+            )
+            updated_at = self._normalize_timestamp(
+                frontmatter.get("updated_at") or created_at or frontmatter.get("date"),
+                default_now=False,
+            )
+            submitted_at = self._normalize_timestamp(
+                frontmatter.get("submitted_at") or updated_at or created_at,
+                default_now=False,
+            )
+
             tags = frontmatter.get("tags") or []
             if not isinstance(tags, list):
                 tags = [str(tags)]
 
             entry: dict[str, Any] = {
+                "slug": path.stem,
                 "title": title,
-                "date": date,
+                "created_at": created_at,
+                "updated_at": updated_at,
+                "submitted_at": submitted_at,
+                "date": (updated_at or created_at)[:10],
                 "tags": [str(tag) for tag in tags],
                 "link": f"/notes/{path.stem}",
             }
 
             if include_excerpt:
                 body = FRONTMATTER_PATTERN.sub("", text).strip()
-                excerpt = re.sub(r"\s+", " ", body)
+                excerpt_base = self._extract_content_from_markdown(body)
+                excerpt = re.sub(r"\s+", " ", excerpt_base)
                 entry["excerpt"] = excerpt[:200]
 
             notes.append(entry)
 
-        notes.sort(key=lambda item: item.get("date", ""), reverse=True)
+        notes.sort(
+            key=lambda item: self._timestamp_sort_value(item.get("updated_at") or item.get("date")),
+            reverse=True,
+        )
         return notes
 
     def _extract_frontmatter(self, text: str) -> dict[str, Any]:
@@ -298,7 +476,42 @@ class NoteIngestor(BaseIngestor):
             return {}
         return parsed if isinstance(parsed, dict) else {}
 
-    def _git_commit(self, slug: str) -> dict[str, Any]:
+    def _parse_timestamp(self, value: Any) -> datetime | None:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+
+        normalized = raw
+        if normalized.endswith("Z"):
+            normalized = normalized[:-1] + "+00:00"
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", normalized):
+            normalized = f"{normalized}T00:00:00+00:00"
+
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def _normalize_timestamp(self, value: Any, *, default_now: bool) -> str:
+        parsed = self._parse_timestamp(value)
+        if parsed:
+            return parsed.replace(microsecond=0).isoformat()
+
+        if default_now:
+            return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        return ""
+
+    def _timestamp_sort_value(self, value: Any) -> float:
+        parsed = self._parse_timestamp(value)
+        if not parsed:
+            return 0.0
+        return parsed.timestamp()
+
+    def _git_commit(self, slug: str, action: str) -> dict[str, Any]:
         add = subprocess.run(
             ["git", "add", "docs/notes", "docs/assets/images", "docs/.vitepress/public/search-index.json"],
             cwd=ROOT_DIR,
@@ -320,8 +533,9 @@ class NoteIngestor(BaseIngestor):
         if diff.returncode == 0:
             return {"committed": False, "message": "No staged changes"}
 
+        verb = "update" if action == "update" else "add"
         commit = subprocess.run(
-            ["git", "commit", "-m", f"docs(kb): add note {slug}"],
+            ["git", "commit", "-m", f"docs(kb): {verb} note {slug}"],
             cwd=ROOT_DIR,
             capture_output=True,
             text=True,
@@ -333,7 +547,31 @@ class NoteIngestor(BaseIngestor):
                 "error": commit.stderr.strip() or "git commit failed",
             }
 
+        commit_hash = ""
+        commit_hash_cmd = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if commit_hash_cmd.returncode == 0:
+            commit_hash = commit_hash_cmd.stdout.strip()
+
+        committed_at = ""
+        commit_time_cmd = subprocess.run(
+            ["git", "log", "-1", "--format=%cI"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if commit_time_cmd.returncode == 0:
+            committed_at = commit_time_cmd.stdout.strip()
+
         return {
             "committed": True,
             "message": commit.stdout.strip().splitlines()[-1] if commit.stdout.strip() else "ok",
+            "hash": commit_hash,
+            "committed_at": committed_at,
         }

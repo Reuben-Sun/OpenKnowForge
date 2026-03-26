@@ -6,6 +6,9 @@ tags:
 - how-to
 - openknowforge
 - local-dev
+created_at: '2026-03-26T00:00:00+00:00'
+updated_at: '2026-03-26T00:00:00+00:00'
+submitted_at: '2026-03-26T00:00:00+00:00'
 date: '2026-03-26'
 type: guide
 status: published
