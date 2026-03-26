@@ -29,18 +29,25 @@ OpenKnowForge/
 └── package.json
 ```
 
-## 1) 启动本地 API
+## 1) 使用 micromamba 启动本地 API
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn api.main:app --reload
+micromamba create -y -n openknowforge python=3.11
+micromamba run -n openknowforge pip install -r requirements.txt -r requirements-dev.txt
+micromamba run -n openknowforge python -m uvicorn api.main:app --reload
 ```
 
 服务地址：`http://127.0.0.1:8000`
 
-也可以直接：
+如果你更习惯先激活环境：
+
+```bash
+eval "$(micromamba shell hook --shell zsh)"
+micromamba activate openknowforge
+python -m uvicorn api.main:app --reload
+```
+
+也可以直接（在已激活环境中）：
 
 ```bash
 ./scripts/run_api.sh
@@ -89,8 +96,7 @@ npm run docs:build
 ## 4) 运行自动化测试
 
 ```bash
-pip install -r requirements-dev.txt
-pytest -q
+micromamba run -n openknowforge python -m pytest -q
 ```
 
 ## 5) GitHub Pages 自动部署
