@@ -46,10 +46,15 @@
   font-size: 16px;
 }
 
-.vp-doc .note-card__time {
-  margin: 6px 0 0;
+.vp-doc .note-card__preview {
+  margin: 8px 0 0;
   color: var(--vp-c-text-2);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .vp-doc .note-card__tags {

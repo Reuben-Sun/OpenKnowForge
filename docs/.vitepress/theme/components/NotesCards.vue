@@ -5,6 +5,7 @@ import { withBase } from 'vitepress'
 type NoteItem = {
   slug?: string
   title: string
+  excerpt?: string
   date?: string
   created_at?: string
   updated_at?: string
@@ -19,6 +20,21 @@ const error = ref('')
 
 const POLL_INTERVAL_MS = 2500
 let pollTimer: number | undefined
+
+function plainTextPreview(value?: string): string {
+  const raw = String(value || '')
+  if (!raw) {
+    return '暂无内容预览'
+  }
+
+  const withoutHtml = raw.replace(/<[^>]*>/g, ' ')
+  const withoutMd = withoutHtml.replace(/[`*_#>\[\]()~\-]+/g, ' ')
+  const normalized = withoutMd.replace(/\s+/g, ' ').trim()
+  if (!normalized) {
+    return '暂无内容预览'
+  }
+  return normalized
+}
 
 function parseTs(value?: string): number {
   if (!value) {
@@ -100,8 +116,7 @@ onBeforeUnmount(() => {
   <div v-if="!loading && !error && sortedNotes.length > 0" class="notes-cards">
     <a v-for="note in sortedNotes" :key="`${note.link}-${note.updated_at || note.date}`" class="note-card" :href="resolveLink(note.link)">
       <h3>{{ note.title }}</h3>
-      <p class="note-card__time">Last Edited: {{ note.updated_at || note.date || 'unknown' }}</p>
-      <p class="note-card__time">Created: {{ note.created_at || 'unknown' }}</p>
+      <p class="note-card__preview">{{ plainTextPreview(note.excerpt) }}</p>
       <div class="note-card__tags">
         <span v-for="tag in note.tags || []" :key="`${note.link}-${tag}`" class="note-card__tag">#{{ tag }}</span>
       </div>
