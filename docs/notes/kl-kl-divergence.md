@@ -5,8 +5,8 @@ tags:
 - information-theory
 - kl-divergence
 created_at: '2026-03-26T12:36:50+00:00'
-updated_at: '2026-03-26T12:36:50+00:00'
-submitted_at: '2026-03-26T12:36:50+00:00'
+updated_at: '2026-03-26T12:37:31+00:00'
+submitted_at: '2026-03-26T12:37:31+00:00'
 date: '2026-03-26'
 type: concept
 status: published
@@ -22,7 +22,7 @@ KL散度（Kullback-Leibler Divergence），也称为相对熵（Relative Entrop
 假设现在有两个离散概率分布 $P$ 和 $Q$，它们的 KL 散度计算公式为：
 
 $$
-D_{KL}(P||Q)=\sum_{i}P(i)\log \left(rac{P(i)}{Q(i)} ight)
+D_{KL}(P||Q)=\sum_{i}P(i)\log \left(\frac{P(i)}{Q(i)} \right)
 $$
 
 其中 $P(i)$ 表示分布 $P$ 在第 $i$ 个事件的概率。

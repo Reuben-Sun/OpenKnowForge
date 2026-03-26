@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-03-26T12:37:03+00:00",
+  "generatedAt": "2026-03-26T12:37:52+00:00",
   "notes": [
     {
       "slug": "kl-kl-divergence",
       "title": "KL散度 KL-Divergence",
       "created_at": "2026-03-26T12:36:50+00:00",
-      "updated_at": "2026-03-26T12:36:50+00:00",
-      "submitted_at": "2026-03-26T12:36:50+00:00",
+      "updated_at": "2026-03-26T12:37:31+00:00",
+      "submitted_at": "2026-03-26T12:37:31+00:00",
       "date": "2026-03-26",
       "tags": [
         "math",
@@ -14,7 +14,7 @@
         "kl-divergence"
       ],
       "link": "/notes/kl-kl-divergence",
-      "excerpt": "### KL散度 KL散度（Kullback-Leibler Divergence），也称为相对熵（Relative Entropy），用于衡量一个分布相对于另一个分布的相似性。 假设现在有两个离散概率分布 $P$ 和 $Q$，它们的 KL 散度计算公式为： $$ D_{KL}(P||Q)=\\sum_{i}P(i)\\log \\left( rac{P(i)}{Q(i)} ight) $$ 其中 $P"
+      "excerpt": "### KL散度 KL散度（Kullback-Leibler Divergence），也称为相对熵（Relative Entropy），用于衡量一个分布相对于另一个分布的相似性。 假设现在有两个离散概率分布 $P$ 和 $Q$，它们的 KL 散度计算公式为： $$ D_{KL}(P||Q)=\\sum_{i}P(i)\\log \\left(\\frac{P(i)}{Q(i)} \\right) $$ 其中"
     },
     {
       "slug": "github-pages-openknowforge-web",
