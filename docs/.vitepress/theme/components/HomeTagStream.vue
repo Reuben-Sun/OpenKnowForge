@@ -20,6 +20,7 @@ const tagStats = ref<TagStat[]>([])
 const POLL_INTERVAL_MS = 3000
 const ROW_COUNT = 3
 const MIN_ROW_ITEMS = 18
+const TAG_COLOR_PALETTE = ['#FF669E', '#66E3FF', '#FF8266', '#66FFC7', '#AB857D', '#807377']
 let pollTimer: number | undefined
 
 function stableHash(text: string): number {
@@ -32,10 +33,7 @@ function stableHash(text: string): number {
 
 function colorForTag(tag: string): string {
   const hash = stableHash(tag)
-  const hue = hash % 360
-  const saturation = 38 + (hash % 12)
-  const lightness = 42 + ((hash >>> 4) % 14)
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+  return TAG_COLOR_PALETTE[hash % TAG_COLOR_PALETTE.length]
 }
 
 function buildTagStats(notes: NoteItem[]): TagStat[] {
