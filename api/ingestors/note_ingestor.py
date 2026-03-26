@@ -205,6 +205,68 @@ class NoteIngestor(BaseIngestor):
         self._ensure_dirs()
         return self._collect_notes(include_excerpt=False)
 
+    def search(self, query: str = "", tag: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
+        self._ensure_dirs()
+        query_text = str(query).strip().lower()
+        tag_text = str(tag).strip().lower() if tag else ""
+        bounded_limit = max(1, min(int(limit), 200))
+
+        all_notes = self._collect_notes(include_excerpt=True)
+        matches: list[dict[str, Any]] = []
+        for item in all_notes:
+            tags = [str(entry).strip() for entry in item.get("tags") or []]
+            if tag_text and not any(tag_text == entry.lower() for entry in tags):
+                continue
+
+            if query_text:
+                haystack_parts = [
+                    str(item.get("title", "")),
+                    str(item.get("excerpt", "")),
+                    " ".join(tags),
+                ]
+                haystack = " ".join(haystack_parts).lower()
+                if query_text not in haystack:
+                    continue
+
+            matches.append(item)
+            if len(matches) >= bounded_limit:
+                break
+
+        return matches
+
+    def delete(self, slug: str) -> dict[str, Any]:
+        self._ensure_dirs()
+        current = self.read(slug)
+        note_path = self._resolve_note_path(slug)
+
+        deleted_images: list[str] = []
+        for src in current.get("image_paths") or []:
+            image_src = str(src).strip()
+            if not image_src.startswith("/assets/images/"):
+                continue
+
+            image_path = IMAGES_DIR / Path(image_src).name
+            if image_path.exists():
+                image_path.unlink()
+                deleted_images.append(str(image_path.relative_to(ROOT_DIR)))
+
+        note_path.unlink()
+        deleted_at = self._normalize_timestamp(None, default_now=True)
+
+        self._rebuild_notes_index()
+        self._rebuild_search_index()
+
+        commit = self._git_commit(slug, action="delete")
+
+        return {
+            "slug": slug,
+            "title": current.get("title", ""),
+            "deleted_at": deleted_at,
+            "note_path": str(note_path.relative_to(ROOT_DIR)),
+            "deleted_images": deleted_images,
+            "git": commit,
+        }
+
     def _ensure_dirs(self) -> None:
         NOTES_DIR.mkdir(parents=True, exist_ok=True)
         IMAGES_DIR.mkdir(parents=True, exist_ok=True)
@@ -507,7 +569,12 @@ class NoteIngestor(BaseIngestor):
         if diff.returncode == 0:
             return {"committed": False, "message": "No staged changes"}
 
-        verb = "update" if action == "update" else "add"
+        if action == "update":
+            verb = "update"
+        elif action == "delete":
+            verb = "delete"
+        else:
+            verb = "add"
         commit = subprocess.run(
             ["git", "commit", "-m", f"docs(kb): {verb} note {slug}"],
             cwd=ROOT_DIR,

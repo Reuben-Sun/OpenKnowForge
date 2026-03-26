@@ -180,6 +180,89 @@ def test_put_note_updates_last_edited_and_sorting(client: TestClient) -> None:
     assert listed[1]['slug'] == b_slug
 
 
+def test_search_notes_filters_by_query_and_tag(client: TestClient) -> None:
+    client.post(
+        '/note',
+        json={
+            'title': 'KL Divergence Formula',
+            'content': 'Information theory distance between distributions.',
+            'tags': ['math', 'information-theory'],
+            'images': [],
+            'type': 'concept',
+            'status': 'published',
+            'related': [],
+            'submitted_at': '2026-03-26T11:00:00+00:00',
+        },
+    )
+    client.post(
+        '/note',
+        json={
+            'title': 'Rust Lifetime Notes',
+            'content': 'Borrow checker and ownership.',
+            'tags': ['rust', 'lang'],
+            'images': [],
+            'type': 'note',
+            'status': 'published',
+            'related': [],
+            'submitted_at': '2026-03-26T11:30:00+00:00',
+        },
+    )
+
+    query_resp = client.get('/notes/search', params={'q': 'divergence'})
+    assert query_resp.status_code == 200
+    query_notes = query_resp.json()['result']
+    assert len(query_notes) == 1
+    assert query_notes[0]['title'] == 'KL Divergence Formula'
+
+    tag_resp = client.get('/notes/search', params={'tag': 'rust'})
+    assert tag_resp.status_code == 200
+    tag_notes = tag_resp.json()['result']
+    assert len(tag_notes) == 1
+    assert tag_notes[0]['title'] == 'Rust Lifetime Notes'
+
+
+def test_delete_note_removes_file_and_assets(client: TestClient, tmp_path: Path) -> None:
+    image_bytes = b'image-for-delete-test'
+    image_data_url = 'data:image/png;base64,' + base64.b64encode(image_bytes).decode('ascii')
+
+    create_resp = client.post(
+        '/note',
+        json={
+            'title': 'Delete Me',
+            'content': 'to be removed',
+            'tags': ['cleanup'],
+            'images': [image_data_url],
+            'type': 'note',
+            'status': 'published',
+            'related': [],
+            'submitted_at': '2026-03-26T11:45:00+00:00',
+        },
+    )
+    assert create_resp.status_code == 200
+    payload = create_resp.json()['result']
+    slug = payload['slug']
+
+    image_files = list((tmp_path / 'docs' / 'assets' / 'images').glob('*.png'))
+    assert len(image_files) == 1
+    assert (tmp_path / payload['note_path']).exists()
+
+    delete_resp = client.delete(f'/note/{slug}')
+    assert delete_resp.status_code == 200
+    delete_result = delete_resp.json()['result']
+    assert delete_result['slug'] == slug
+    assert delete_result['note_path'] == payload['note_path']
+    assert len(delete_result['deleted_images']) == 1
+
+    assert not (tmp_path / payload['note_path']).exists()
+    assert not image_files[0].exists()
+
+    read_deleted = client.get(f'/note/{slug}')
+    assert read_deleted.status_code == 404
+
+    listed = client.get('/notes').json()['result']
+    assert slug not in [item['slug'] for item in listed]
+
+
 def test_post_note_rejects_invalid_image_payload(client: TestClient) -> None:
     response = client.post(
         '/note',

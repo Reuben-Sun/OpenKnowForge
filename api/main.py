@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from api.ingestors.note_ingestor import NoteIngestor
@@ -60,11 +60,48 @@ async def list_notes() -> dict[str, object]:
     return {"ok": True, "result": notes}
 
 
+@app.get("/notes/search")
+async def search_notes(
+    q: str = Query(default="", description="keyword search in title/content/tags"),
+    tag: str | None = Query(default=None, description="exact tag filter"),
+    limit: int = Query(default=20, ge=1, le=200),
+) -> dict[str, object]:
+    ingestor = NoteIngestor()
+    try:
+        notes = ingestor.search(query=q, tag=tag, limit=limit)
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {
+        "ok": True,
+        "result": notes,
+        "query": {
+            "q": q,
+            "tag": tag,
+            "limit": limit,
+            "count": len(notes),
+        },
+    }
+
+
 @app.get("/note/{slug}")
 async def read_note(slug: str) -> dict[str, object]:
     ingestor = NoteIngestor()
     try:
         result = ingestor.read(slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {"ok": True, "result": result}
+
+
+@app.delete("/note/{slug}")
+async def delete_note(slug: str) -> dict[str, object]:
+    ingestor = NoteIngestor()
+    try:
+        result = ingestor.delete(slug)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
