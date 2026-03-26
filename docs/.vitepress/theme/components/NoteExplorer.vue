@@ -209,4 +209,25 @@ onMounted(async () => {
   font-size: 12px;
   padding: 2px 8px;
 }
+
+.dark .note-explorer {
+  background: linear-gradient(165deg, rgba(12, 18, 31, 0.95), rgba(8, 47, 73, 0.35));
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.dark .note-explorer__search,
+.dark .note-explorer__tag,
+.dark .note-explorer__item {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.dark .note-explorer__chip {
+  background: rgba(13, 148, 136, 0.2);
+  color: #99f6e4;
+}
+
+.dark .note-explorer__error {
+  color: #fca5a5;
+}
 </style>
