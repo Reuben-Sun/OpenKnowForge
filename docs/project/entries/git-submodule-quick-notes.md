@@ -12,6 +12,8 @@ type: guide
 status: published
 related:
 - git
+word_count: 40
+image_count: 0
 ---
 
 # Git Submodule Quick Notes

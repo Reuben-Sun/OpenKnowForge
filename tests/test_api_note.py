@@ -96,6 +96,8 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
     assert 'created_at: ' in note_text
     assert 'updated_at: ' in note_text
     assert 'submitted_at: ' in note_text
+    assert 'word_count: 3' in note_text
+    assert 'image_count: 1' in note_text
     assert '<img src="/project/images/' in note_text
 
     notes_index_text = (tmp_path / 'docs' / 'ui' / 'zh' / 'notes' / 'index.md').read_text(encoding='utf-8')
@@ -116,10 +118,15 @@ def test_post_note_creates_markdown_assets_and_indexes(client: TestClient, tmp_p
     assert search_index['notes'][0]['link'] == f'/notes/entries/{slug}'
     assert 'math' in search_index['notes'][0]['tags']
     assert search_index['notes'][0]['updated_at'] == '2026-03-26T10:00:00+00:00'
+    assert search_index['notes'][0]['word_count'] == 3
+    assert search_index['notes'][0]['image_count'] == 1
 
     assert payload['created_at'] == '2026-03-26T10:00:00+00:00'
     assert payload['updated_at'] == '2026-03-26T10:00:00+00:00'
     assert payload['submitted_at'] == '2026-03-26T10:00:00+00:00'
+    assert payload['word_count'] == 3
+    assert payload['image_count'] == 1
+    assert payload['uploaded_image_count'] == 1
 
 
 def test_get_note_returns_structured_note(client: TestClient) -> None:
@@ -148,6 +155,8 @@ def test_get_note_returns_structured_note(client: TestClient) -> None:
     assert note['content'] == 'Initial content'
     assert note['created_at'] == '2026-03-26T09:00:00+00:00'
     assert note['updated_at'] == '2026-03-26T09:00:00+00:00'
+    assert note['word_count'] == 2
+    assert note['image_count'] == 0
 
 
 def test_put_note_updates_last_edited_and_sorting(client: TestClient) -> None:
@@ -192,12 +201,18 @@ def test_put_note_updates_last_edited_and_sorting(client: TestClient) -> None:
         },
     )
     assert edit_resp.status_code == 200
+    edit_payload = edit_resp.json()['result']
+    assert edit_payload['word_count'] == 2
+    assert edit_payload['image_count'] == 0
+    assert edit_payload['uploaded_image_count'] == 0
 
     edited_note = client.get(f'/note/{a_slug}').json()['result']
     assert edited_note['content'] == 'alpha updated'
     assert edited_note['status'] == 'published'
     assert edited_note['created_at'] == '2026-03-26T09:00:00+00:00'
     assert edited_note['updated_at'] == '2026-03-26T12:30:00+00:00'
+    assert edited_note['word_count'] == 2
+    assert edited_note['image_count'] == 0
 
     list_resp = client.get('/notes')
     assert list_resp.status_code == 200
@@ -240,6 +255,7 @@ def test_put_note_cleans_removed_local_images(client: TestClient, tmp_path: Path
     assert update_resp.status_code == 200
     updated_payload = update_resp.json()['result']
     assert len(updated_payload['removed_images']) == 1
+    assert updated_payload['image_count'] == 0
 
     assert not image_files[0].exists()
 
@@ -277,12 +293,16 @@ def test_search_notes_filters_by_query_and_tag(client: TestClient) -> None:
     query_notes = query_resp.json()['result']
     assert len(query_notes) == 1
     assert query_notes[0]['title'] == 'KL Divergence Formula'
+    assert query_notes[0]['word_count'] > 0
+    assert query_notes[0]['image_count'] == 0
 
     tag_resp = client.get('/notes/search', params={'tag': 'rust'})
     assert tag_resp.status_code == 200
     tag_notes = tag_resp.json()['result']
     assert len(tag_notes) == 1
     assert tag_notes[0]['title'] == 'Rust Lifetime Notes'
+    assert tag_notes[0]['word_count'] > 0
+    assert tag_notes[0]['image_count'] == 0
 
 
 def test_delete_note_removes_file_and_assets(client: TestClient, tmp_path: Path) -> None:
@@ -360,3 +380,45 @@ def test_post_note_empty_title_fails_validation(client: TestClient) -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_existing_note_stats_are_backfilled_once(client: TestClient, tmp_path: Path) -> None:
+    legacy_note_path = tmp_path / 'docs' / 'project' / 'entries' / 'legacy.md'
+    legacy_note_path.parent.mkdir(parents=True, exist_ok=True)
+    legacy_note_path.write_text(
+        '\n'.join(
+            [
+                '---',
+                'title: Legacy Note',
+                'tags:',
+                '  - legacy',
+                'created_at: 2026-03-26T08:00:00+00:00',
+                'updated_at: 2026-03-26T08:00:00+00:00',
+                'submitted_at: 2026-03-26T08:00:00+00:00',
+                'date: 2026-03-26',
+                'type: note',
+                'status: published',
+                'related: []',
+                '---',
+                '',
+                '# Legacy Note',
+                '',
+                'legacy content line',
+                '',
+                '![legacy image](/project/images/legacy.png)',
+                '',
+            ]
+        ),
+        encoding='utf-8',
+    )
+
+    list_resp = client.get('/notes')
+    assert list_resp.status_code == 200
+    listed = list_resp.json()['result']
+    legacy_item = next(item for item in listed if item['slug'] == 'legacy')
+    assert legacy_item['word_count'] == 3
+    assert legacy_item['image_count'] == 1
+
+    refreshed = legacy_note_path.read_text(encoding='utf-8')
+    assert 'word_count: 3' in refreshed
+    assert 'image_count: 1' in refreshed

@@ -41,7 +41,18 @@ DATA_URL_PATTERN = re.compile(r"^data:(?P<mime>[-\w.]+/[-\w.+]+);base64,(?P<data
 FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 SLUG_PATTERN = re.compile(r"^[a-z0-9-]+$")
 IMG_SRC_PATTERN = re.compile(r'<img\s+[^>]*src="([^"]+)"', re.IGNORECASE)
+HTML_IMG_TAG_PATTERN = re.compile(r"<img\s+[^>]*>", re.IGNORECASE)
+MARKDOWN_IMG_PATTERN = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
+CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```")
+INLINE_CODE_PATTERN = re.compile(r"`[^`\n]*`")
+LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+MATH_BLOCK_PATTERN = re.compile(r"\$\$[\s\S]*?\$\$")
+INLINE_MATH_PATTERN = re.compile(r"\$(?!\s)([^$\n]+?)\$")
+CJK_CHAR_PATTERN = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]")
+LATIN_WORD_PATTERN = re.compile(r"[A-Za-z0-9]+(?:[._'/-][A-Za-z0-9]+)*")
 RESERVED_NOTE_FILES = {"index.md", "explorer.md"}
+STATS_BACKFILLED_ROOTS: set[str] = set()
 
 
 @dataclass
@@ -83,6 +94,7 @@ class NoteIngestor(BaseIngestor):
             submitted_at=submitted_at,
             images=saved_images,
         )
+        word_count, image_count, image_paths = self._read_note_stats(note_path)
 
         self._rebuild_notes_index()
         self._rebuild_en_note_aliases()
@@ -93,8 +105,10 @@ class NoteIngestor(BaseIngestor):
         return {
             "slug": slug,
             "note_path": str(note_path.relative_to(ROOT_DIR)),
-            "image_count": len(saved_images),
-            "image_paths": [img.markdown_path for img in saved_images],
+            "uploaded_image_count": len(saved_images),
+            "image_count": image_count,
+            "image_paths": image_paths,
+            "word_count": word_count,
             "created_at": created_at,
             "updated_at": updated_at,
             "submitted_at": submitted_at,
@@ -154,8 +168,9 @@ class NoteIngestor(BaseIngestor):
             images=[],
         )
         latest_markdown = note_path.read_text(encoding="utf-8")
-        latest_image_paths = set(IMG_SRC_PATTERN.findall(latest_markdown))
+        latest_image_paths = set(self._extract_image_paths_from_markdown(latest_markdown))
         removed_images = self._cleanup_images(previous_image_paths, keep_paths=latest_image_paths)
+        word_count, image_count, image_paths = self._read_note_stats(note_path)
 
         self._rebuild_notes_index()
         self._rebuild_en_note_aliases()
@@ -166,8 +181,10 @@ class NoteIngestor(BaseIngestor):
         return {
             "slug": slug,
             "note_path": str(note_path.relative_to(ROOT_DIR)),
-            "image_count": len(saved_images),
-            "image_paths": [img.markdown_path for img in saved_images],
+            "uploaded_image_count": len(saved_images),
+            "image_count": image_count,
+            "image_paths": image_paths,
+            "word_count": word_count,
             "removed_images": removed_images,
             "created_at": created_at,
             "updated_at": updated_at,
@@ -203,7 +220,10 @@ class NoteIngestor(BaseIngestor):
         )
 
         content = self._extract_content_from_markdown(markdown_body)
-        image_paths = IMG_SRC_PATTERN.findall(markdown_body)
+        image_paths = self._extract_image_paths_from_markdown(markdown_body)
+        computed_word_count, computed_image_count = self._compute_note_stats(markdown_body)
+        word_count = self._normalize_count(frontmatter.get("word_count"), fallback=computed_word_count)
+        image_count = self._normalize_count(frontmatter.get("image_count"), fallback=computed_image_count)
 
         return {
             "slug": path.stem,
@@ -217,6 +237,8 @@ class NoteIngestor(BaseIngestor):
             "created_at": created_at,
             "updated_at": updated_at,
             "submitted_at": submitted_at,
+            "word_count": word_count,
+            "image_count": image_count,
             "image_paths": image_paths,
         }
 
@@ -306,6 +328,7 @@ class NoteIngestor(BaseIngestor):
         USER_NOTES_DIR.mkdir(parents=True, exist_ok=True)
         IMAGES_DIR.mkdir(parents=True, exist_ok=True)
         PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
+        self._backfill_note_stats_once()
 
     def _normalize_list(self, value: Any) -> list[str]:
         if not value:
@@ -438,18 +461,6 @@ class NoteIngestor(BaseIngestor):
         submitted_at: str,
         images: list[SavedImage],
     ) -> Path:
-        frontmatter = {
-            "title": title,
-            "tags": tags,
-            "created_at": created_at,
-            "updated_at": updated_at,
-            "submitted_at": submitted_at,
-            "date": (updated_at or created_at)[:10],
-            "type": note_type,
-            "status": status,
-            "related": related,
-        }
-
         image_lines: list[str] = []
         for img in images:
             image_lines.append(f'<img src="{img.markdown_path}" alt="{title}" loading="lazy" />')
@@ -462,8 +473,25 @@ class NoteIngestor(BaseIngestor):
                 body_lines.append("")
             body_lines.extend(["## Images", "", *image_lines])
 
+        body_markdown = "\n".join(body_lines).rstrip()
+        word_count, image_count = self._compute_note_stats(body_markdown)
+
+        frontmatter = {
+            "title": title,
+            "tags": tags,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "submitted_at": submitted_at,
+            "date": (updated_at or created_at)[:10],
+            "word_count": word_count,
+            "image_count": image_count,
+            "type": note_type,
+            "status": status,
+            "related": related,
+        }
+
         frontmatter_block = "---\n" + yaml.safe_dump(frontmatter, sort_keys=False).strip() + "\n---"
-        markdown = frontmatter_block + "\n\n" + "\n".join(body_lines).rstrip() + "\n"
+        markdown = frontmatter_block + "\n\n" + body_markdown + "\n"
 
         note_path = USER_NOTES_DIR / f"{slug}.md"
         note_path.write_text(markdown, encoding="utf-8")
@@ -476,6 +504,113 @@ class NoteIngestor(BaseIngestor):
             if lines and not lines[0].strip():
                 lines = lines[1:]
         return "\n".join(lines).strip()
+
+    def _extract_image_paths_from_markdown(self, markdown: str) -> list[str]:
+        html_paths = IMG_SRC_PATTERN.findall(markdown)
+        markdown_paths = MARKDOWN_IMG_PATTERN.findall(markdown)
+
+        paths: list[str] = []
+        for path in [*html_paths, *markdown_paths]:
+            item = str(path).strip()
+            if item:
+                paths.append(item)
+        return paths
+
+    def _to_plain_text(self, markdown_body: str) -> str:
+        base = self._extract_content_from_markdown(markdown_body)
+        if not base:
+            return ""
+
+        text = CODE_BLOCK_PATTERN.sub(" ", base)
+        text = MATH_BLOCK_PATTERN.sub(" ", text)
+        text = INLINE_MATH_PATTERN.sub(" ", text)
+        text = INLINE_CODE_PATTERN.sub(" ", text)
+        text = MARKDOWN_IMG_PATTERN.sub(" ", text)
+        text = HTML_IMG_TAG_PATTERN.sub(" ", text)
+        text = LINK_PATTERN.sub(lambda match: f" {match.group(1)} ", text)
+        text = HTML_TAG_PATTERN.sub(" ", text)
+        text = re.sub(r"(?mi)^\s*#{1,6}\s*images\s*$", " ", text)
+        text = re.sub(r"[#>*_`~\-]+", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
+    def _count_words(self, markdown_body: str) -> int:
+        text = self._to_plain_text(markdown_body)
+        if not text:
+            return 0
+
+        cjk_count = len(CJK_CHAR_PATTERN.findall(text))
+        latin_count = len(LATIN_WORD_PATTERN.findall(text))
+        return cjk_count + latin_count
+
+    def _compute_note_stats(self, markdown_body: str) -> tuple[int, int]:
+        normalized = str(markdown_body or "").strip()
+        if not normalized:
+            return 0, 0
+        word_count = self._count_words(normalized)
+        image_count = len(self._extract_image_paths_from_markdown(normalized))
+        return word_count, image_count
+
+    def _normalize_count(self, value: Any, *, fallback: int) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return fallback
+        if parsed < 0:
+            return fallback
+        return parsed
+
+    def _read_note_stats(self, note_path: Path) -> tuple[int, int, list[str]]:
+        markdown = note_path.read_text(encoding="utf-8")
+        body = FRONTMATTER_PATTERN.sub("", markdown).strip()
+        word_count, image_count = self._compute_note_stats(body)
+        image_paths = self._extract_image_paths_from_markdown(body)
+        return word_count, image_count, image_paths
+
+    def _backfill_note_stats_once(self) -> None:
+        root_key = str(ROOT_DIR.resolve())
+        if root_key in STATS_BACKFILLED_ROOTS:
+            return
+        self._rebuild_note_stats()
+        STATS_BACKFILLED_ROOTS.add(root_key)
+
+    def _rebuild_note_stats(self) -> None:
+        paths_by_slug: dict[str, Path] = {}
+        for path in sorted(USER_NOTES_DIR.glob("*.md")):
+            paths_by_slug[path.stem] = path
+        for path in sorted(LEGACY_USER_NOTES_DIR.glob("*.md")):
+            paths_by_slug.setdefault(path.stem, path)
+        for path in sorted(LEGACY_NOTES_DIR.glob("*.md")):
+            if path.name in RESERVED_NOTE_FILES:
+                continue
+            paths_by_slug.setdefault(path.stem, path)
+
+        for path in paths_by_slug.values():
+            text = path.read_text(encoding="utf-8")
+            match = FRONTMATTER_PATTERN.match(text)
+            if not match:
+                continue
+
+            frontmatter = self._extract_frontmatter(text)
+            if not frontmatter:
+                continue
+
+            body = FRONTMATTER_PATTERN.sub("", text).strip()
+            word_count, image_count = self._compute_note_stats(body)
+
+            current_word_count = self._normalize_count(frontmatter.get("word_count"), fallback=-1)
+            current_image_count = self._normalize_count(frontmatter.get("image_count"), fallback=-1)
+            if current_word_count == word_count and current_image_count == image_count:
+                continue
+
+            frontmatter["word_count"] = word_count
+            frontmatter["image_count"] = image_count
+            frontmatter_block = "---\n" + yaml.safe_dump(frontmatter, sort_keys=False).strip() + "\n---"
+            body_with_spacing = text[match.end() :].lstrip("\n")
+            rewritten = f"{frontmatter_block}\n\n{body_with_spacing}"
+            if not rewritten.endswith("\n"):
+                rewritten += "\n"
+            path.write_text(rewritten, encoding="utf-8")
 
     def _rebuild_notes_index(self) -> None:
         zh_lines: list[str] = [
@@ -569,6 +704,7 @@ class NoteIngestor(BaseIngestor):
             text = path.read_text(encoding="utf-8")
             frontmatter = self._extract_frontmatter(text)
             title = str(frontmatter.get("title") or path.stem)
+            body = FRONTMATTER_PATTERN.sub("", text).strip()
 
             created_at = self._normalize_timestamp(
                 frontmatter.get("created_at") or frontmatter.get("date"),
@@ -587,6 +723,10 @@ class NoteIngestor(BaseIngestor):
             if not isinstance(tags, list):
                 tags = [str(tags)]
 
+            computed_word_count, computed_image_count = self._compute_note_stats(body)
+            word_count = self._normalize_count(frontmatter.get("word_count"), fallback=computed_word_count)
+            image_count = self._normalize_count(frontmatter.get("image_count"), fallback=computed_image_count)
+
             entry: dict[str, Any] = {
                 "slug": slug,
                 "title": title,
@@ -594,6 +734,8 @@ class NoteIngestor(BaseIngestor):
                 "updated_at": updated_at,
                 "submitted_at": submitted_at,
                 "date": (updated_at or created_at)[:10],
+                "word_count": word_count,
+                "image_count": image_count,
                 "tags": [str(tag) for tag in tags],
                 "link": f"/notes/entries/{slug}"
                 if path.parent in (USER_NOTES_DIR, LEGACY_USER_NOTES_DIR)
@@ -601,7 +743,6 @@ class NoteIngestor(BaseIngestor):
             }
 
             if include_excerpt:
-                body = FRONTMATTER_PATTERN.sub("", text).strip()
                 excerpt_base = self._extract_content_from_markdown(body)
                 excerpt = re.sub(r"\s+", " ", excerpt_base)
                 entry["excerpt"] = excerpt[:200]

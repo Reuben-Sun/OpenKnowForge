@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-26T15:09:50+00:00",
+  "generatedAt": "2026-03-26T15:47:33+00:00",
   "notes": [
     {
       "slug": "note",
@@ -8,6 +8,8 @@
       "updated_at": "2026-03-26T13:02:40+00:00",
       "submitted_at": "2026-03-26T13:02:40+00:00",
       "date": "2026-03-26",
+      "word_count": 4,
+      "image_count": 1,
       "tags": [
         "image",
         "share"
@@ -22,6 +24,8 @@
       "updated_at": "2026-03-26T13:02:27+00:00",
       "submitted_at": "2026-03-26T13:02:27+00:00",
       "date": "2026-03-26",
+      "word_count": 132,
+      "image_count": 0,
       "tags": [
         "math",
         "information-theory",
@@ -37,6 +41,8 @@
       "updated_at": "2026-03-26T12:29:03+00:00",
       "submitted_at": "2026-03-26T12:29:03+00:00",
       "date": "2026-03-26",
+      "word_count": 355,
+      "image_count": 0,
       "tags": [
         "github-pages",
         "deploy",
@@ -54,6 +60,8 @@
       "updated_at": "2026-03-26T11:53:34+00:00",
       "submitted_at": "2026-03-26T11:53:34+00:00",
       "date": "2026-03-26",
+      "word_count": 40,
+      "image_count": 0,
       "tags": [
         "git",
         "submodule",
@@ -69,6 +77,8 @@
       "updated_at": "2026-03-26T00:00:00+00:00",
       "submitted_at": "2026-03-26T00:00:00+00:00",
       "date": "2026-03-26",
+      "word_count": 153,
+      "image_count": 0,
       "tags": [
         "guide",
         "how-to",

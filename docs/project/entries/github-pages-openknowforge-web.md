@@ -14,6 +14,8 @@ type: guide
 status: published
 related:
 - openknowforge
+word_count: 355
+image_count: 0
 ---
 
 # GitHub Pages 部署配置步骤 OpenKnowForge Web

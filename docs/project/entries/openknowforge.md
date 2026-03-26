@@ -15,6 +15,8 @@ status: published
 related:
 - notes-explorer
 - search-index
+word_count: 153
+image_count: 0
 ---
 
 # OpenKnowForge 项目使用方法（本地开发与预览）

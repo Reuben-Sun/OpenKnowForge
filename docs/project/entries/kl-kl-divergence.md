@@ -11,6 +11,8 @@ date: '2026-03-26'
 type: concept
 status: published
 related: []
+word_count: 132
+image_count: 0
 ---
 
 # 数学公式示例

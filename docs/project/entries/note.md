@@ -10,6 +10,8 @@ date: '2026-03-26'
 type: note
 status: published
 related: []
+word_count: 4
+image_count: 1
 ---
 
 # 图片示例
