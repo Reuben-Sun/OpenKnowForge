@@ -9,10 +9,24 @@ const normalizeBasePath = (value: string): string => {
   return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`
 }
 
+const resolveGitHubRepoLink = (): string => {
+  const fallbackRepo = 'Reuben-Sun/OpenKnowForge'
+  const rawValue =
+    process.env.VITEPRESS_GITHUB_REPO?.trim() ||
+    process.env.GITHUB_REPOSITORY?.trim() ||
+    fallbackRepo
+  const normalized = rawValue.replace(/\/+$/, '')
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized
+  }
+  return `https://github.com/${normalized.replace(/^\/+/, '')}`
+}
+
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]?.trim()
 const explicitBase = process.env.VITEPRESS_BASE?.trim()
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
 const isUserOrOrgSiteRepo = Boolean(repoName && repoName.toLowerCase().endsWith('.github.io'))
+const githubRepoLink = resolveGitHubRepoLink()
 const base = explicitBase
   ? normalizeBasePath(explicitBase)
   : isGitHubActions && repoName && !isUserOrOrgSiteRepo
@@ -20,7 +34,7 @@ const base = explicitBase
     : '/'
 
 const sharedSocialLinks: DefaultTheme.SocialLink[] = [
-  { icon: 'github', link: 'https://github.com/Reuben-Sun/OpenKnowForge' }
+  { icon: 'github', link: githubRepoLink }
 ]
 
 const zhThemeConfig: DefaultTheme.Config = {

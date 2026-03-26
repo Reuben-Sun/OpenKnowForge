@@ -10,10 +10,10 @@ tags:
 - vitepress
 - ci
 created_at: '2026-03-26T00:00:00+00:00'
-updated_at: '2026-03-26T16:56:48+00:00'
-submitted_at: '2026-03-26T16:56:48+00:00'
+updated_at: '2026-03-26T17:02:20+00:00'
+submitted_at: '2026-03-26T17:02:20+00:00'
 date: '2026-03-26'
-word_count: 484
+word_count: 511
 image_count: 0
 type: guide
 status: published
@@ -67,6 +67,7 @@ const base = explicitBase
 2. 在 GitHub Actions 构建项目页时，自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
 3. 如果仓库名是 `xxx.github.io`（用户/组织主页），自动使用 `base: '/'`。
 4. 需要手动覆盖时，设置环境变量 `VITEPRESS_BASE`（例如 `/docs/` 或 `/`）。
+5. GitHub 社交链接默认会自动使用当前仓库；需要覆盖时设置 `VITEPRESS_GITHUB_REPO`（如 `owner/repo` 或完整 GitHub URL）。
 
 ### 2. 启用 GitHub Pages
 
@@ -86,7 +87,7 @@ const base = explicitBase
 
 1. 必做：在 `Settings -> Pages` 把 Source 设为 `GitHub Actions`。
 2. 必做：将代码推送到 `main`，触发自动部署。
-3. 可选：把站点中的 GitHub 链接改成你自己的仓库地址。
+3. 可选：设置 `VITEPRESS_GITHUB_REPO` 指向你自己的仓库（如 `your-name/your-repo`）。
 4. 通常不需要手改 `base`；仅在特殊路径部署时才通过 `VITEPRESS_BASE` 覆盖。
 
 ### Failed to load search index. Create notes via POST /note first.
