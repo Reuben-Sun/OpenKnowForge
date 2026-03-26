@@ -180,13 +180,8 @@ onBeforeUnmount(() => {
     <p v-else-if="!currentNote" class="related-notes-sidebar__meta">Current note is not indexed yet.</p>
     <p v-else-if="(currentNote.tags || []).length === 0" class="related-notes-sidebar__meta">Current note has no tags.</p>
     <ul v-else-if="relatedNotes.length > 0" class="related-notes-sidebar__list">
-      <li
-        v-for="note in relatedNotes"
-        :key="`${note.link}-${note.overlap}`"
-        class="related-notes-sidebar__item"
-      >
+      <li v-for="note in relatedNotes" :key="`${note.link}-${note.overlap}`" class="related-notes-sidebar__item">
         <a :href="resolveLink(note.link)" class="related-notes-sidebar__link">{{ note.title }}</a>
-        <span class="related-notes-sidebar__score">{{ note.overlap }} shared tag<span v-if="note.overlap > 1">s</span></span>
       </li>
     </ul>
     <p v-else class="related-notes-sidebar__meta">No notes with overlapping tags.</p>
@@ -195,15 +190,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .related-notes-sidebar {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
-  padding: 10px 10px 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.9));
-  margin-bottom: 10px;
+  margin: 0 0 12px;
 }
 
 .related-notes-sidebar__title {
-  margin: 0 0 8px;
+  margin: 0 0 8px 0;
   font-size: 12px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -220,33 +211,24 @@ onBeforeUnmount(() => {
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .related-notes-sidebar__item {
-  display: grid;
-  gap: 2px;
+  margin: 0;
 }
 
 .related-notes-sidebar__link {
+  display: inline-block;
   font-size: 13px;
   line-height: 1.3;
-  color: var(--vp-c-text-1);
+  color: var(--vp-c-text-2);
   text-decoration: none;
 }
 
 .related-notes-sidebar__link:hover {
   color: var(--vp-c-brand-1);
-}
-
-.related-notes-sidebar__score {
-  font-size: 11px;
-  color: var(--vp-c-text-2);
-}
-
-.dark .related-notes-sidebar {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.7));
-  border-color: rgba(148, 163, 184, 0.3);
 }
 </style>
