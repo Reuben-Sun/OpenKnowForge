@@ -1,18 +1,18 @@
 ---
-title: "\u7F8E\u56FE\u5206\u4EAB"
+title: "\u56FE\u7247\u793A\u4F8B"
 tags:
 - image
 - share
 created_at: '2026-03-26T12:09:59+00:00'
-updated_at: '2026-03-26T12:09:59+00:00'
-submitted_at: '2026-03-26T12:09:59+00:00'
+updated_at: '2026-03-26T13:02:40+00:00'
+submitted_at: '2026-03-26T13:02:40+00:00'
 date: '2026-03-26'
 type: note
 status: published
 related: []
 ---
 
-# 美图分享
+# 图片示例
 
 美图分享
 
