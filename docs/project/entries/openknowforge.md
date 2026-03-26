@@ -10,10 +10,10 @@ tags:
 - vitepress
 - ci
 created_at: '2026-03-26T00:00:00+00:00'
-updated_at: '2026-03-26T17:02:20+00:00'
-submitted_at: '2026-03-26T17:02:20+00:00'
+updated_at: '2026-03-26T17:07:07+00:00'
+submitted_at: '2026-03-26T17:07:07+00:00'
 date: '2026-03-26'
-word_count: 511
+word_count: 509
 image_count: 0
 type: guide
 status: published
@@ -46,9 +46,9 @@ npm run docs:dev
 
 目标：将本项目的 VitePress Web 站点自动部署到 GitHub Pages。
 
-### 1. 配置 VitePress base（关键）
+### 1. VitePress base（默认无需配置）
 
-本项目默认已自动处理 `base`，fork 后一般不需要改代码：
+本项目默认已自动处理 `base`，包括 fork 场景在内，通常不需要手动配置：
 
 ```ts
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1]?.trim()
@@ -62,12 +62,14 @@ const base = explicitBase
     : '/'
 ```
 
-含义：
-1. 本地开发时使用 `base: '/'`。
-2. 在 GitHub Actions 构建项目页时，自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
-3. 如果仓库名是 `xxx.github.io`（用户/组织主页），自动使用 `base: '/'`。
-4. 需要手动覆盖时，设置环境变量 `VITEPRESS_BASE`（例如 `/docs/` 或 `/`）。
-5. GitHub 社交链接默认会自动使用当前仓库；需要覆盖时设置 `VITEPRESS_GITHUB_REPO`（如 `owner/repo` 或完整 GitHub URL）。
+默认行为：
+1. 本地开发使用 `base: '/'`。
+2. GitHub Actions 构建项目页时自动使用 `/<repo>/`（例如 `/OpenKnowForge/`）。
+3. 若仓库名是 `xxx.github.io`（用户/组织主页），自动使用 `base: '/'`。
+
+仅在特殊部署路径下需要手动覆盖：
+1. 设置 `VITEPRESS_BASE`（例如 `/docs/` 或 `/`）。
+2. 如需覆盖 GitHub 社交链接，设置 `VITEPRESS_GITHUB_REPO`（`owner/repo` 或完整 GitHub URL）。
 
 ### 2. 启用 GitHub Pages
 
