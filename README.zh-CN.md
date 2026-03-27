@@ -5,12 +5,28 @@
 OpenKnowForge 是一个 API 原生、Git 驱动的知识库系统。
 它把笔记生产、元数据治理、静态发布、版本追踪整合成一条可工程化的工作流。
 
+## OpenClaw 全自动工作流（无需人工写笔记）
+
+这个项目的设计前提是以 OpenClaw 作为主要内容生产引擎。
+日常使用中不需要人类手动维护 markdown 笔记正文。
+
+请优先在 OpenClaw 中安装这个 Skill：
+
+- OpenKnowForge-Skill：`https://github.com/Reuben-Sun/OpenKnowForge-Skill.git`
+
+推荐使用方式：
+
+1. 在 OpenClaw 中从上述仓库安装 `OpenKnowForge-Skill`。
+2. 由 OpenClaw 通过 OpenKnowForge API 完成笔记创建、编辑、分类和维护。
+3. 人类主要负责复核与知识治理，而不是手工撰写原始笔记。
+
 ![Home](assets/Home.png)
 
 ## 项目含金量
 
 OpenKnowForge 不是普通的 Markdown 笔记集合，它的价值在于把“记笔记”变成“可编排的知识工程”：
 
+- OpenClaw 原生工作流：通过 `OpenKnowForge-Skill` 可将笔记创作全程交给 OpenClaw。
 - 可编程知识管理：通过 HTTP API 管理笔记，便于脚本与 Agent 自动化接入。
 - Git 级别治理：每次变更可追踪、可审计、可回滚，天然适配协作场景。
 - 生产可发布架构：写入是动态 API，输出是静态站点，兼顾开发效率与线上稳定性。

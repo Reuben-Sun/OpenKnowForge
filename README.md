@@ -5,6 +5,21 @@
 OpenKnowForge is an API-native, Git-backed knowledge base system.
 It connects note authoring, metadata governance, static publishing, and version traceability into one workflow.
 
+## OpenClaw-First Workflow (No Manual Note Writing)
+
+This project is designed to run with OpenClaw as the primary authoring engine.
+Human users do not need to manually write notes in markdown files.
+
+Install this skill in OpenClaw first:
+
+- OpenKnowForge Skill: `https://github.com/Reuben-Sun/OpenKnowForge-Skill.git`
+
+Recommended operating model:
+
+1. Install `OpenKnowForge-Skill` in OpenClaw from the repository above.
+2. Let OpenClaw create, edit, classify, and maintain notes through OpenKnowForge APIs.
+3. Keep human input focused on review and curation instead of raw note drafting.
+
 ![Home](assets/Home.png)
 
 ## Why This Project Matters
@@ -12,6 +27,7 @@ It connects note authoring, metadata governance, static publishing, and version 
 OpenKnowForge is not just another markdown notebook.
 Its core value is turning knowledge management into an engineering system:
 
+- OpenClaw-native workflow: note creation can be fully delegated to OpenClaw with `OpenKnowForge-Skill`.
 - Programmable knowledge operations: notes are managed via HTTP APIs, so scripts/agents can create and maintain content reliably.
 - Git-level governance: every note change is committed, auditable, and easy to roll back.
 - Publish-ready architecture: data is edited dynamically but published as static pages for speed and low ops cost.
