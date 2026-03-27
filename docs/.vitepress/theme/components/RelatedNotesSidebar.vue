@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRoute, withBase } from 'vitepress'
+import { useRoute, useRouter, withBase } from 'vitepress'
 
 type NoteItem = {
   slug?: string
@@ -16,6 +16,7 @@ type RelatedNote = NoteItem & {
 }
 
 const route = useRoute()
+const router = useRouter()
 const notes = ref<NoteItem[]>([])
 const loading = ref(false)
 const isEn = computed(() => route.path.startsWith('/en/'))
@@ -71,6 +72,21 @@ function resolveLink(link: string): string {
     return withBase(`/en${normalized}`)
   }
   return withBase(normalized)
+}
+
+function onLinkClick(event: MouseEvent, link: string): void {
+  if (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return
+  }
+  event.preventDefault()
+  void router.go(resolveLink(link))
 }
 
 const enabled = computed(() => isNoteDetailPath(route.path))
@@ -201,7 +217,13 @@ watch(
     <p v-else-if="(currentNote.tags || []).length === 0" class="related-notes-panel__meta">{{ uiText.noTag }}</p>
     <ul v-else-if="relatedNotes.length > 0" class="related-notes-panel__list">
       <li v-for="note in relatedNotes" :key="`${note.link}-${note.overlap}`" class="related-notes-panel__item">
-        <a :href="resolveLink(note.link)" class="related-notes-panel__link">{{ note.title }}</a>
+        <a
+          :href="resolveLink(note.link)"
+          class="related-notes-panel__link"
+          @click="onLinkClick($event, note.link)"
+        >
+          {{ note.title }}
+        </a>
       </li>
     </ul>
     <p v-else class="related-notes-panel__meta">{{ uiText.empty }}</p>
@@ -250,7 +272,10 @@ watch(
   font-size: 13px;
   line-height: 1.35;
   color: var(--vp-c-text-2);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .related-notes-panel__link:hover {
