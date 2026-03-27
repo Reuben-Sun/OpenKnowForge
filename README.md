@@ -1,36 +1,56 @@
 # OpenKnowForge
 
-OpenKnowForge 是一个面向个人与团队的知识库工程实践：
-通过本地 API 维护 Markdown 笔记与图片资产，把“内容管理 + 版本管理 + 文档发布”串成一条流水线。
+[中文](README.zh-CN.md)
 
-## 设计理念
+OpenKnowForge is an API-first knowledge base project built with FastAPI + Markdown + VitePress + GitHub Pages.
 
-- 内容优先：知识以 Markdown 为核心，便于编辑、审阅与长期保存。
-- Git 原生：每次知识变更都可追踪，可协作，可回滚。
-- 发布友好：前端基于 VitePress，可直接部署到 GitHub Pages。
+## Design Philosophy
 
-## 启动 API
+- Keep knowledge as plain Markdown files so content stays portable.
+- Use HTTP APIs for programmable note creation, update, search, and publishing workflows.
+- Keep UI static and deployment simple via GitHub Pages.
+- Make every content change traceable through Git history.
 
-1. 安装 Python 依赖
+## Quick Start
+
+### 1) Install dependencies
 
 ```bash
 pip install -r requirements.txt
+npm install
 ```
 
-2. 启动本地 API
+### 2) Start API
 
 ```bash
 python -m uvicorn api.main:app --reload
 ```
 
-默认地址：`http://127.0.0.1:8000`
+API base URL: `http://127.0.0.1:8000`
+
+### 3) Start local docs preview
+
+```bash
+npm run docs:dev
+```
+
+Preview URL: `http://127.0.0.1:5173`
 
 ## GitHub Pages
 
-项目已内置 GitHub Pages 工作流：`.github/workflows/pages.yml`。
+This repo already includes a Pages workflow at `.github/workflows/pages.yml`.
 
-使用步骤：
+To deploy:
 
-1. 在仓库设置中启用 Pages，并将 Source 设为 `GitHub Actions`。
-2. 推送代码到默认分支（如 `main`）后，工作流会自动构建并部署站点。
+1. Enable GitHub Pages in repository settings (Build and deployment -> Source: GitHub Actions).
+2. Push commits to `main`.
+3. GitHub Actions will build and publish docs automatically.
 
+## Documentation
+
+- Guide (CN): `docs/ui/zh/guide/`
+- Guide (EN): `docs/ui/en/guide/`
+
+## License
+
+Apache License 2.0. See `LICENSE`.
