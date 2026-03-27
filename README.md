@@ -2,37 +2,33 @@
 
 [中文](README.zh-CN.md)
 
-OpenKnowForge is an API-native, Git-backed knowledge base system.
-It connects note authoring, metadata governance, static publishing, and version traceability into one workflow.
+OpenKnowForge is an API-native, Git-backed knowledge engineering system.
+It unifies content generation, metadata governance, static publishing, and version traceability into a single workflow.
 
 ## OpenClaw-First Workflow (No Manual Note Writing)
 
-This project is designed to run with OpenClaw as the primary authoring engine.
-Human users do not need to manually write notes in markdown files.
+The project is designed around OpenClaw as the primary authoring engine.
+In normal operation, notes are not manually drafted one by one; OpenClaw handles creation and maintenance through APIs.
 
 Install this skill in OpenClaw first:
 
-- OpenKnowForge Skill: `https://github.com/Reuben-Sun/OpenKnowForge-Skill.git`
+- OpenKnowForge-Skill: `https://github.com/Reuben-Sun/OpenKnowForge-Skill.git`
 
-Recommended operating model:
+Recommended workflow:
 
-1. Install `OpenKnowForge-Skill` in OpenClaw from the repository above.
-2. Let OpenClaw create, edit, classify, and maintain notes through OpenKnowForge APIs.
-3. Keep human input focused on review and curation instead of raw note drafting.
+1. Install `OpenKnowForge-Skill` in OpenClaw.
+2. Let OpenClaw call OpenKnowForge APIs for note creation, editing, classification, and maintenance.
+3. Keep human effort focused on review, correction, and knowledge governance.
 
 ![Home](assets/Home.png)
 
-## Why This Project Matters
+## Design Philosophy
 
-OpenKnowForge is not just another markdown notebook.
-Its core value is turning knowledge management into an engineering system:
-
-- OpenClaw-native workflow: note creation can be fully delegated to OpenClaw with `OpenKnowForge-Skill`.
-- Programmable knowledge operations: notes are managed via HTTP APIs, so scripts/agents can create and maintain content reliably.
-- Git-level governance: every note change is committed, auditable, and easy to roll back.
-- Publish-ready architecture: data is edited dynamically but published as static pages for speed and low ops cost.
-- Structured knowledge schema: each note carries metadata (status, timestamps, tags, stats), enabling deterministic indexing and filtering.
-- Team-friendly delivery: local development is lightweight, deployment is CI-driven, and output is accessible through GitHub Pages.
+- Automation first: treat note-taking as an orchestrated knowledge pipeline driven by APIs.
+- Traceability first: keep every content change in Git history for auditability and rollback.
+- Publishing first: combine dynamic ingestion with static delivery for both velocity and reliability.
+- Structure first: use a consistent metadata model to support indexing, search, sorting, and rendering.
+- Collaboration first: keep local setup lightweight and deployment CI-driven for team adoption.
 
 ## Core Capabilities (Implemented)
 
@@ -48,46 +44,46 @@ Its core value is turning knowledge management into an engineering system:
 - Search notes: `GET /notes/search`
 - Push repository: `POST /git/push`
 
-### 2) Strong metadata model
+### 2) Structured metadata model
 
 Each note maintains:
 
-- `status`: `mature` or `draft`
-- `created_at`, `updated_at`, `submitted_at`
-- `tags`, `related`, `type`
-- `word_count`, `image_count`
+- Status: `status` (`mature` / `draft`)
+- Time fields: `created_at`, `updated_at`, `submitted_at`
+- Semantic fields: `tags`, `related`, `type`
+- Statistics: `word_count`, `image_count`
 
-This supports reliable sorting, filtering, and UI rendering.
+This model keeps sorting, filtering, rendering, and API responses consistent.
 
-### 3) Reliable content stats
+### 3) Automatic statistics and backfill
 
-Word/image statistics are calculated when creating and editing notes.
-Existing notes are also backfilled automatically on startup when needed.
+Word and image counts are computed on create and update.
+Legacy notes are backfilled when needed during startup to keep metadata consistent.
 
-### 4) Image ingestion and normalization
+### 4) Image ingestion and normalized storage
 
-The API accepts image inputs as:
+The API accepts image input as:
 
 - Data URL
 - HTTP(S) URL
 - Base64 string
 
-Images are stored under `docs/project/images/` and linked into the note body.
+Images are stored under `docs/project/images/` and injected into note content automatically.
 
-### 5) Auto index and site sync
+### 5) Auto index rebuild and site sync
 
-After note changes, the system automatically rebuilds:
+After note mutations, the system rebuilds:
 
 - Notes index pages
 - English note alias files
 - `docs/public/search-index.json`
 
-So local docs preview and static site outputs stay in sync with the latest content.
+This keeps local preview and static output aligned with current content.
 
 ### 6) Built-in Git traceability
 
-Note create/update/delete operations auto-stage and auto-commit content updates.
-The API response includes commit hash/time when a commit is generated.
+Create, update, and delete operations perform automatic staging and committing.
+When a commit is created, the API response includes the commit hash and timestamp.
 
 ## Architecture
 
@@ -111,9 +107,9 @@ GitHub Pages
 
 - Backend API: FastAPI
 - Content format: Markdown + YAML frontmatter
-- Site generator: VitePress
-- Index/search source: `docs/public/search-index.json`
-- CI/CD: GitHub Actions + GitHub Pages
+- Docs engine: VitePress
+- Search index source: `docs/public/search-index.json`
+- Delivery pipeline: GitHub Actions + GitHub Pages
 
 ## Quick Start
 
@@ -145,20 +141,18 @@ npm run docs:dev
 
 ## GitHub Pages Deployment
 
-This repository already contains workflow config at:
+The repository already includes workflow configuration at `.github/workflows/pages.yml`.
 
-- `.github/workflows/pages.yml`
+Deployment steps:
 
-Deploy steps:
-
-1. In GitHub repo settings, enable Pages and choose `GitHub Actions` as source.
+1. Enable GitHub Pages in repository settings and select `GitHub Actions` as the source.
 2. Push commits to `main`.
-3. The Pages workflow builds and publishes docs automatically.
+3. The workflow builds and publishes the site automatically.
 
 ## Project Layout (High-level)
 
 - API code: `api/`
-- UI/guide docs: `docs/ui/`
+- UI and guides: `docs/ui/`
 - User notes: `docs/project/entries/`
 - User images: `docs/project/images/`
 - Search index: `docs/public/search-index.json`
