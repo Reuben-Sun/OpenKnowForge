@@ -49,6 +49,17 @@ const zhThemeConfig: DefaultTheme.Config = {
     { text: '探索', link: '/notes/explorer' },
     { text: '指南', link: '/guide/api' }
   ],
+  sidebar: {
+    '/guide/': [
+      {
+        text: '指南',
+        items: [
+          { text: 'API', link: '/guide/api' },
+          { text: '结构', link: '/guide/structure' }
+        ]
+      }
+    ]
+  },
   socialLinks: sharedSocialLinks,
   search: {
     provider: 'local'
@@ -67,6 +78,17 @@ const enThemeConfig: DefaultTheme.Config = {
     { text: 'Explore', link: '/en/notes/explorer' },
     { text: 'Guide', link: '/en/guide/api' }
   ],
+  sidebar: {
+    '/en/guide/': [
+      {
+        text: 'Guide',
+        items: [
+          { text: 'API', link: '/en/guide/api' },
+          { text: 'Structure', link: '/en/guide/structure' }
+        ]
+      }
+    ]
+  },
   socialLinks: sharedSocialLinks,
   search: {
     provider: 'local'
