@@ -37,6 +37,28 @@ const sharedSocialLinks: DefaultTheme.SocialLink[] = [
   { icon: 'github', link: githubRepoLink }
 ]
 
+const zhGuideSidebar: DefaultTheme.SidebarItem[] = [
+  {
+    text: '指南',
+    items: [
+      { text: '快速开始', link: '/guide/quick-start' },
+      { text: 'API', link: '/guide/api' },
+      { text: '结构', link: '/guide/structure' }
+    ]
+  }
+]
+
+const enGuideSidebar: DefaultTheme.SidebarItem[] = [
+  {
+    text: 'Guide',
+    items: [
+      { text: 'Quick Start', link: '/en/guide/quick-start' },
+      { text: 'API', link: '/en/guide/api' },
+      { text: 'Structure', link: '/en/guide/structure' }
+    ]
+  }
+]
+
 const zhThemeConfig: DefaultTheme.Config = {
   langMenuLabel: '语言',
   outline: {
@@ -50,16 +72,8 @@ const zhThemeConfig: DefaultTheme.Config = {
     { text: '指南', link: '/guide/quick-start' }
   ],
   sidebar: {
-    '/guide/': [
-      {
-        text: '指南',
-        items: [
-          { text: '快速开始', link: '/guide/quick-start' },
-          { text: 'API', link: '/guide/api' },
-          { text: '结构', link: '/guide/structure' }
-        ]
-      }
-    ]
+    '/guide': zhGuideSidebar,
+    '/guide/': zhGuideSidebar
   },
   socialLinks: sharedSocialLinks,
   search: {
@@ -80,16 +94,8 @@ const enThemeConfig: DefaultTheme.Config = {
     { text: 'Guide', link: '/en/guide/quick-start' }
   ],
   sidebar: {
-    '/en/guide/': [
-      {
-        text: 'Guide',
-        items: [
-          { text: 'Quick Start', link: '/en/guide/quick-start' },
-          { text: 'API', link: '/en/guide/api' },
-          { text: 'Structure', link: '/en/guide/structure' }
-        ]
-      }
-    ]
+    '/en/guide': enGuideSidebar,
+    '/en/guide/': enGuideSidebar
   },
   socialLinks: sharedSocialLinks,
   search: {
