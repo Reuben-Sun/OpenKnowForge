@@ -1,6 +1,6 @@
 # API 教程
 
-本文按“添加 -> 搜索 -> 修改 -> 删除”的顺序演示。  
+本文按“添加 -> 搜索 -> 修改 -> 删除 -> 推送”的顺序演示。  
 服务地址默认是 `http://127.0.0.1:8000`。
 
 ## `GET /health`
@@ -128,6 +128,42 @@ curl -X DELETE http://127.0.0.1:8000/note/<slug>
 - `note_path`
 - `deleted_images`
 - `git.hash`
+
+## 6) 推送到远端 `POST /git/push`
+
+将当前分支推送到远端仓库，默认等价于：
+
+```bash
+git push origin <当前分支>
+```
+
+示例（最常用）：
+
+```bash
+curl -X POST http://127.0.0.1:8000/git/push \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+指定远端与分支：
+
+```bash
+curl -X POST http://127.0.0.1:8000/git/push \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "remote": "origin",
+    "branch": "main",
+    "set_upstream": false,
+    "force_with_lease": false
+  }'
+```
+
+返回重点字段：
+
+- `remote`
+- `branch`
+- `hash`
+- `committed_at`
 
 ## 补充：读取与列表
 

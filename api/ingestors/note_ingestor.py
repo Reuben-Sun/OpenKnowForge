@@ -904,3 +904,85 @@ class NoteIngestor(BaseIngestor):
             "hash": commit_hash,
             "committed_at": committed_at,
         }
+
+    def git_push(
+        self,
+        *,
+        remote: str = "origin",
+        branch: str | None = None,
+        set_upstream: bool = False,
+        force_with_lease: bool = False,
+    ) -> dict[str, Any]:
+        remote_name = str(remote or "").strip() or "origin"
+        branch_name = str(branch or "").strip()
+
+        if not branch_name:
+            branch_cmd = subprocess.run(
+                ["git", "branch", "--show-current"],
+                cwd=ROOT_DIR,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if branch_cmd.returncode != 0:
+                raise ValueError(branch_cmd.stderr.strip() or "failed to resolve current branch")
+            branch_name = branch_cmd.stdout.strip()
+            if not branch_name:
+                raise ValueError("current branch is detached; please provide branch explicitly")
+
+        push_cmd = ["git", "push"]
+        if set_upstream:
+            push_cmd.append("-u")
+        if force_with_lease:
+            push_cmd.append("--force-with-lease")
+        push_cmd.extend([remote_name, branch_name])
+
+        push = subprocess.run(
+            push_cmd,
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if push.returncode != 0:
+            raise ValueError(push.stderr.strip() or push.stdout.strip() or "git push failed")
+
+        hash_cmd = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        head_hash = hash_cmd.stdout.strip() if hash_cmd.returncode == 0 else ""
+
+        committed_at_cmd = subprocess.run(
+            ["git", "log", "-1", "--format=%cI"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        committed_at = committed_at_cmd.stdout.strip() if committed_at_cmd.returncode == 0 else ""
+
+        remote_url_cmd = subprocess.run(
+            ["git", "remote", "get-url", remote_name],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        remote_url = remote_url_cmd.stdout.strip() if remote_url_cmd.returncode == 0 else ""
+
+        return {
+            "pushed": True,
+            "remote": remote_name,
+            "remote_url": remote_url,
+            "branch": branch_name,
+            "set_upstream": set_upstream,
+            "force_with_lease": force_with_lease,
+            "hash": head_hash,
+            "committed_at": committed_at,
+            "stdout": push.stdout.strip(),
+            "stderr": push.stderr.strip(),
+        }

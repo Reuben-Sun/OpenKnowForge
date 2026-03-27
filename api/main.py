@@ -37,6 +37,13 @@ class NoteStatusPayload(BaseModel):
     submitted_at: Optional[str] = Field(default=None)
 
 
+class GitPushPayload(BaseModel):
+    remote: str = Field(default="origin", min_length=1)
+    branch: Optional[str] = Field(default=None, min_length=1)
+    set_upstream: bool = Field(default=False)
+    force_with_lease: bool = Field(default=False)
+
+
 def _canonical_status_name(value: str) -> str:
     raw = str(value).strip().lower()
     if raw == "published":
@@ -221,6 +228,24 @@ async def update_note_status(slug: str, payload: NoteStatusPayload) -> dict[str,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive handling
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc}") from exc
+    return {"ok": True, "result": result}
+
+
+@app.post("/git/push")
+async def push_git(payload: Optional[GitPushPayload] = None) -> dict[str, object]:
+    ingestor = NoteIngestor()
+    request = payload or GitPushPayload()
+    try:
+        result = ingestor.git_push(
+            remote=request.remote,
+            branch=request.branch,
+            set_upstream=request.set_upstream,
+            force_with_lease=request.force_with_lease,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive handling

@@ -1,6 +1,6 @@
 # API Guide
 
-This guide follows: create -> search -> update -> delete.
+This guide follows: create -> search -> update -> delete -> push.
 Default service endpoint: `http://127.0.0.1:8000`.
 
 ## `GET /health`
@@ -128,6 +128,42 @@ Key fields in response:
 - `note_path`
 - `deleted_images`
 - `git.hash`
+
+## 6) Push to remote `POST /git/push`
+
+Pushes the current branch to remote repository. By default it behaves like:
+
+```bash
+git push origin <current-branch>
+```
+
+Most common usage:
+
+```bash
+curl -X POST http://127.0.0.1:8000/git/push \
+  -H 'Content-Type: application/json' \
+  -d '{}'
+```
+
+Specify remote and branch:
+
+```bash
+curl -X POST http://127.0.0.1:8000/git/push \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "remote": "origin",
+    "branch": "main",
+    "set_upstream": false,
+    "force_with_lease": false
+  }'
+```
+
+Key fields in response:
+
+- `remote`
+- `branch`
+- `hash`
+- `committed_at`
 
 ## Extra: read and list
 
